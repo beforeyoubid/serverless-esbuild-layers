@@ -101,7 +101,7 @@ class EsbuildLayersPlugin implements Plugin {
    * this runs as a serverless hook
    */
   async installLayers(): Promise<void> {
-    let installedLayers: Layer[] = [];
+    const installedLayers: Layer[] = [];
     const layers = getLayers(this.serverless);
     for (const [name, layer] of Object.entries(layers)) {
       const installed = await this.installLayer(layer, name);

@@ -179,7 +179,6 @@ class EsbuildLayersPlugin implements Plugin {
       } catch (err) {
         this.log.warning(`Unable to check for peer deps for package ${name} as an error occurred`);
       }
-      // this.log.info(JSON.parse(depPackageJson));
     }
     return deps;
   }

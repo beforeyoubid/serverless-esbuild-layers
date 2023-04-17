@@ -99,19 +99,11 @@ jobs:
             cd module_test
             yarn install --registry http://localhost:4873
       - run:
-          name: Test ts-loader layer install
+          name: Test layer install
           command: |
             cd module_test
             yarn install --registry http://localhost:4873
-            timeout 35 yarn sls package --stage=ts-loader || echo package failed
-            yarn test
-      - run:
-          name: Test swc layer install
-          command: |
-            cd module_test
-            yarn install --registry http://localhost:4873
-            sudo rm -rf artifacts
-            timeout 35 yarn sls package --stage=swc || echo package failed
+            timeout 35 yarn sls package || echo package failed
             yarn test
       - save_cache:
           key: node_modules-{{ checksum "yarn.lock" }}

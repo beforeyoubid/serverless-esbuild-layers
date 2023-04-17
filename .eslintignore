@@ -1,0 +1,6 @@
+examples
+node_modules
+dist
+coverage
+module_test/webpack/*
+src/__tests__/webpack.config.js

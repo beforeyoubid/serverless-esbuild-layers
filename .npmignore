@@ -1,0 +1,13 @@
+/.editorconfig
+/.travis*
+/src/
+/test/
+.nyc_output
+.vscode
+examples
+test
+.prettierignore
+.prettierrc
+.eslintignore
+.eslintrc
+.circleci

@@ -1,0 +1,129 @@
+defaults: &defaults
+  working_directory: ~/app/
+  docker:
+    - image: cimg/node:14.19
+  resource_class: medium
+
+version: 2.1
+jobs:
+  unit-test:
+    <<: *defaults
+    steps:
+      - checkout
+      - restore_cache:
+          key: node_modules-{{ checksum "yarn.lock" }}
+      - run:
+          name: Setup Code Climate test-reporter
+          command: |
+            curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+            chmod +x ./cc-test-reporter
+      - run: NODE_ENV=development yarn
+      - run: mkdir -p ./reports/jest/ ; true
+      - run:
+          name: Tests
+          command: yarn test --reporters=jest-junit
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/jest/
+      - store_test_results:
+          path: ./reports/jest/
+      - run:
+          name: Upload to CodeClimate
+          command: |
+            ./cc-test-reporter format-coverage -t=clover coverage/clover.xml
+            ./cc-test-reporter upload-coverage
+      - save_cache:
+          key: node_modules-{{ checksum "yarn.lock" }}
+          paths:
+            - ~/app/node_modules/
+  lint:
+    <<: *defaults
+    steps:
+      - checkout
+      - restore_cache:
+          key: node_modules-{{ checksum "yarn.lock" }}
+      - run: NODE_ENV=development yarn
+      - run:
+          name: Lint
+          command: yarn lint
+      - save_cache:
+          key: node_modules-{{ checksum "yarn.lock" }}
+          paths:
+            - ~/app/node_modules/
+  typescript:
+    <<: *defaults
+    steps:
+      - checkout
+      - restore_cache:
+          key: node_modules-{{ checksum "yarn.lock" }}
+      - run: NODE_ENV=development yarn
+      - run:
+          name: Check typescript
+          command: yarn ts
+      - save_cache:
+          key: node_modules-{{ checksum "yarn.lock" }}
+          paths:
+            - ~/app/node_modules/
+  build:
+    <<: *defaults
+    steps:
+      - checkout
+      - restore_cache:
+          key: node_modules-{{ checksum "yarn.lock" }}
+      - run: NODE_ENV=development yarn
+      - run:
+          name: Yarn build
+          command: yarn build
+      - save_cache:
+          key: node_modules-{{ checksum "yarn.lock" }}
+          paths:
+            - ~/app/node_modules/
+  publish-dry-run:
+    <<: *defaults
+    steps:
+      - checkout
+      - restore_cache:
+          key: node_modules-{{ checksum "yarn.lock" }}
+      - run: NODE_ENV=development yarn
+      - run: yarn build-and-publish-dryrun
+      - run: npm i -g verdaccio
+      - run:
+          name: Wait for Verdaccio to start
+          command: |
+            cd module_test
+            verdaccio --config verdaccio_config.yaml
+          background: true
+      - run: npm run build-and-publish-dryrun-ci
+      - run:
+          name: Test module install
+          command: |
+            cd module_test
+            yarn install --registry http://localhost:4873
+      - run:
+          name: Test ts-loader layer install
+          command: |
+            cd module_test
+            yarn install --registry http://localhost:4873
+            timeout 35 yarn sls package --stage=ts-loader || echo package failed
+            yarn test
+      - run:
+          name: Test swc layer install
+          command: |
+            cd module_test
+            yarn install --registry http://localhost:4873
+            sudo rm -rf artifacts
+            timeout 35 yarn sls package --stage=swc || echo package failed
+            yarn test
+      - save_cache:
+          key: node_modules-{{ checksum "yarn.lock" }}
+          paths:
+            - ~/app/node_modules/
+
+workflows:
+  version: 2
+  application:
+    jobs:
+      - unit-test
+      - lint
+      - typescript
+      - publish-dry-run
+      - build

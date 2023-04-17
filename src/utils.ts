@@ -34,9 +34,9 @@ export const isFunctionDefinition = (
  * @returns a string list of all the file matches
  */
 const globPromise = async (pattern: string): Promise<string[]> => {
-  const paths = await glob(pattern, { withFileTypes: true });
-  console.log({ paths });
-  return [];
+  const paths = await glob(pattern.replace(/.default$/, '.@(ts|js)?(x)'), { withFileTypes: true });
+  const basePath = pattern.replace(/(.+)\/.+$/, (_full, match) => match);
+  return paths.map(p => path.join(basePath, p.name));
 };
 
 /**
@@ -63,7 +63,7 @@ async function findEntriesSpecified(specifiedEntries: string | string[]) {
  * @returns an object containing the entries
  */
 export async function resolvedEntries(sls: Serverless, layerRefName: string) {
-  const newEntries: Record<string, string> = {};
+  const newEntries: Set<string> = new Set();
   const backupFileType =
     sls.service.custom.layerConfig.backupFileType ?? sls.service.custom.layerConfig.webpack.backupFileType ?? 'default';
   for (const func of Object.values(sls.service.functions)) {
@@ -71,27 +71,30 @@ export async function resolvedEntries(sls: Serverless, layerRefName: string) {
       console.error(`This library doesn't currently support functions with an image`);
       continue;
     }
-    const { handler, layers = [], entry: specifiedEntries = [], shouldLayer = true } = func;
+    const { handler, layers = [], shouldLayer = true } = func;
     if (!shouldLayer) continue;
     if (!layers.some(layer => layer.Ref === layerRefName)) continue;
-    const matchedSpecifiedEntries = await findEntriesSpecified(specifiedEntries);
+    const matchedSpecifiedEntries = await findEntriesSpecified([handler]);
     for (const entry of matchedSpecifiedEntries) {
-      newEntries[entry] = path.resolve(entry);
+      newEntries.add(path.resolve(entry));
     }
-    const match = handler.match(/^(((?:[^\/\n]+\/)+)?[^.]+(.jsx?|.tsx?)?)/);
-    if (!match) continue;
-    const [handlerName, , folderName = ''] = match;
-    const files = await fs.promises.readdir(path.resolve(folderName.replace(/\/$/, '')));
-    let fileName = handlerName.replace(folderName, '');
-    const filteredFiles = files.filter(file => file.startsWith(fileName));
-    if (filteredFiles.length > 1) {
-      fileName += `.${backupFileType}`;
-    } else {
-      fileName = filteredFiles[0];
+    if (matchedSpecifiedEntries.length === 0) {
+      const match = handler.match(/^(((?:[^\/\n]+\/)+)?[^.]+(.jsx?|.tsx?)?)/);
+      if (!match) continue;
+      const [handlerName, , folderName = ''] = match;
+      const files = await fs.promises.readdir(path.resolve(folderName.replace(/\/$/, '')));
+      let fileName = handlerName.replace(folderName, '');
+      const filteredFiles = files.filter(file => file.startsWith(fileName));
+      if (filteredFiles.length > 1) {
+        fileName += `.${backupFileType}`;
+      } else {
+        fileName = filteredFiles[0];
+      }
+      newEntries.add(path.resolve(path.join(folderName, fileName)));
     }
-    newEntries[handlerName] = path.resolve(path.join(folderName, fileName));
   }
-  return newEntries;
+
+  return Array.from(newEntries);
 }
 
 export const exec = util.promisify(
@@ -122,7 +125,7 @@ export function getLayers(serverless: Serverless): { [key: string]: Layer } {
 export async function getExternalModules(serverless: Serverless, layerRefName: string): Promise<string[]> {
   const entries = await resolvedEntries(serverless, layerRefName);
   const result = await esbuild.build({
-    entryPoints: [path.resolve(process.cwd(), 'src', 'handlers', 'graphql.ts')],
+    entryPoints: entries,
     plugins: [nodeExternalsPlugin()],
     metafile: true,
     bundle: true,

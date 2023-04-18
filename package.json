@@ -9,6 +9,9 @@
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*"
+  ],
   "scripts": {
     "test": "jest --coverage --passWithNoTests",
     "lint": "eslint '**/*.{ts,tsx,js,jsx}' --max-warnings 0",

@@ -35,7 +35,7 @@ export const isFunctionDefinition = (
  */
 const globPromise = async (pattern: string): Promise<string[]> => {
   const paths = await glob(pattern.replace(/.default$/, '.@(ts|js)?(x)'), { withFileTypes: true });
-  const basePath = pattern.replace(/(.+)\/.+$/, (_full, match) => match);
+  const basePath = pattern.includes('/') ? pattern.replace(/(.+)\/.+$/, (_full, match) => match) : '';
   return paths.map(p => path.join(basePath, p.name));
 };
 

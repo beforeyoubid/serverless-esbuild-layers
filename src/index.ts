@@ -130,7 +130,7 @@ class EsbuildLayersPlugin implements Plugin {
   async fetchModulesForLayer(layerName: string) {
     const layerRefName = `${layerName.replace(/^./, x => x.toUpperCase())}LambdaLayer`;
 
-    const dependencies = await getExternalModules(this.serverless, this.config.forceExclude, layerRefName);
+    const dependencies = await getExternalModules(this.serverless, this.config, layerRefName);
     if (dependencies.length === 0) return {};
     const packageJsonText = await fs.promises.readFile(path.join(basePath, 'package.json'), { encoding: 'utf-8' });
     const packageJson = JSON.parse(packageJsonText) as PackageJsonFile;

@@ -119,12 +119,13 @@ export function getLayers(serverless: Serverless): { [key: string]: Layer } {
 /**
  * locate all external modules attached to a particular layer
  * @param serverless the serverless instance to check
+ * @param config the plugin config
  * @param layerRefName the name of the layer to check
  * @returns an array of strings containing the layer's modules
  */
 export async function getExternalModules(
   serverless: Serverless,
-  forceExclude: string[],
+  config: Config,
   layerRefName: string
 ): Promise<string[]> {
   const entries = await resolvedEntries(serverless, layerRefName);
@@ -166,7 +167,9 @@ export async function getExternalModules(
       .reduce((list, listsOfMods) => list.concat(...listsOfMods), [])
       .filter(module => !isBuiltinModule(module))
   );
-  return Array.from(imports).filter(dep => !DEFAULT_AWS_MODULES.includes(dep) && !forceExclude.includes(dep));
+  return Array.from(imports)
+    .filter(dep => !DEFAULT_AWS_MODULES.includes(dep) && !config.forceExclude.includes(dep))
+    .concat(config.forceInclude);
 }
 
 export function compileConfig(userConfig: Partial<Config>): Config {

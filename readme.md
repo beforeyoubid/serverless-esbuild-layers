@@ -6,6 +6,8 @@ This helps to keep the overall function size down.
 
 This library is designed to be used in conjuction with [serverless-esbuild][serverless-esbuild] to build your code.
 
+If you are using [serverless-webpack][serverless-webpack], you can try [serverless-webpack-layers][serverless-webpack-layers] to achieve this functionality.
+
 ![Diagram](./docs/diagram.png)
 
 ## Installation
@@ -80,5 +82,7 @@ custom:
 
 [serverless]: https://www.serverless.com/
 [serverless-esbuild]: https://github.com/floydspace/serverless-esbuild
+[serverless-webpack]: https://github.com/serverless-heaven/serverless-webpack
+[serverless-webpack-layers]: https://github.com/beforeyoubid/serverless-webpack-layers
 [esbuild-plugins]: https://github.com/floydspace/serverless-esbuild#esbuild-plugins
 [esbuild-node-externals]: https://github.com/pradel/esbuild-node-externals

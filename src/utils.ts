@@ -124,6 +124,7 @@ export function getLayers(serverless: Serverless): { [key: string]: Layer } {
  */
 export async function getExternalModules(serverless: Serverless, layerRefName: string): Promise<string[]> {
   const entries = await resolvedEntries(serverless, layerRefName);
+  if (entries.length === 0) return [];
   const result = await esbuild.build({
     entryPoints: entries,
     plugins: [nodeExternalsPlugin()],

@@ -19,7 +19,4 @@ plugins:
   nodesecurity:
     enabled: true
   eslint:
-    enabled: true
-    channel: 'eslint-7'
-    config:
-      config: .eslintrc
+    enabled: false

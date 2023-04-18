@@ -162,7 +162,7 @@ describe(`Plugin tests`, () => {
   });
 });
 
-describe.only('plugin install', () => {
+describe('plugin install', () => {
   const packagers: Packager[] = ['npm', 'yarn', 'pnpm'];
   for (const packager of packagers) {
     it(`should install layers successfully - ${packager}`, async () => {

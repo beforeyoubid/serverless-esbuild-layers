@@ -3,11 +3,10 @@ import path from 'path';
 import del from 'del';
 import pascalcase from 'pascalcase';
 import minifyAll from 'minify-all-js';
-import { findDependencies, findPackagePaths } from 'esbuild-node-externals/dist/utils';
 
 import type Serverless from 'serverless';
 import type Plugin from 'serverless/classes/Plugin';
-import { type CloudFormationResource, type Output } from 'serverless/aws';
+import type { CloudFormationResource, Output } from 'serverless/aws';
 
 import {
   PackageJsonFile,
@@ -21,7 +20,7 @@ import {
 } from './types';
 import { PACKAGER_ADD_COMMAND, PACKAGER_LOCK_FILE_NAMES } from './constants';
 import { compileConfig, getExternalModules, getLayers, exec } from './utils';
-import { info, verbose, Log } from './logger';
+import { Log } from './logger';
 
 const basePath = process.cwd();
 
@@ -38,6 +37,7 @@ class EsbuildLayersPlugin implements Plugin {
   config: Config;
   level: Level;
   log: Plugin.Logging['log'];
+  installedLayerNames: Set<string>;
 
   /**
    * plugin constructor
@@ -48,6 +48,7 @@ class EsbuildLayersPlugin implements Plugin {
       'package:initialize': this.installLayers.bind(this),
       'before:deploy:deploy': this.transformLayerResources.bind(this),
     };
+    this.installedLayerNames = new Set();
 
     this.serverless = serverless;
     this.region = serverless.service.provider.region;
@@ -99,17 +100,21 @@ class EsbuildLayersPlugin implements Plugin {
    * function to install all layers
    *
    * this runs as a serverless hook
+   *
+   * @returns a list of installed layers
    */
-  async installLayers(): Promise<void> {
-    let installedLayers: Layer[] = [];
+  async installLayers(): Promise<{ installedLayers: Layer[] }> {
+    const installedLayers: Layer[] = [];
     const layers = getLayers(this.serverless);
     for (const [name, layer] of Object.entries(layers)) {
       const installed = await this.installLayer(layer, name);
       if (!installed) continue;
       await this.cleanup(layer.path);
       installedLayers.push(layer);
+      this.installedLayerNames.add(name);
     }
     this.log.info(`Installed ${installedLayers.length} layer${installedLayers.length > 1 ? 's' : ''}`);
+    return { installedLayers };
   }
   /**
    * locate the node modules used for a particular layer
@@ -126,12 +131,13 @@ class EsbuildLayersPlugin implements Plugin {
     const layerRefName = `${layerName.replace(/^./, x => x.toUpperCase())}LambdaLayer`;
 
     const dependencies = await getExternalModules(this.serverless, layerRefName);
+    if (dependencies.length === 0) return {};
     const packageJsonText = await fs.promises.readFile(path.join(basePath, 'package.json'), { encoding: 'utf-8' });
     const packageJson = JSON.parse(packageJsonText) as PackageJsonFile;
     const depsWithVersion = dependencies.reduce(
       (obj, dep) => ({
         ...obj,
-        [dep]: (packageJson.dependencies?.[dep] || packageJson.devDependencies?.[dep]) ?? '*',
+        [dep]: packageJson.dependencies?.[dep] ?? packageJson.devDependencies?.[dep] ?? '*',
       }),
       {} as Record<string, string>
     );
@@ -179,7 +185,6 @@ class EsbuildLayersPlugin implements Plugin {
       } catch (err) {
         this.log.warning(`Unable to check for peer deps for package ${name} as an error occurred`);
       }
-      // this.log.info(JSON.parse(depPackageJson));
     }
     return deps;
   }
@@ -199,6 +204,7 @@ class EsbuildLayersPlugin implements Plugin {
         await fs.promises.mkdir(nodeLayerPath, { recursive: true });
       }
       const dependencies = await this.fetchModulesForLayer(layerName);
+      if (Object.keys(dependencies).length === 0) return false;
       const fileName = PACKAGER_LOCK_FILE_NAMES[this.packager];
       try {
         await fs.promises.copyFile(path.join(process.cwd(), fileName), path.join(nodeLayerPath, fileName));
@@ -277,11 +283,11 @@ class EsbuildLayersPlugin implements Plugin {
     this.log.info(`Cleaned ${filesDeleted.length} files at ${nodeLayerPath}`);
   }
 
-  async transformLayerResources(): Promise<TransformedLayerResources> {
+  transformLayerResources(): TransformedLayerResources {
     const layers = getLayers(this.serverless);
     const { compiledCloudFormationTemplate: cf } = this.serverless.service.provider;
 
-    const layersKeys = Object.keys(layers);
+    const layersKeys = Object.keys(layers).filter(name => this.installedLayerNames.has(name));
 
     const transformedResources = layersKeys.reduce(
       (result: Maybe<TransformedLayerResources>, id: string) => {

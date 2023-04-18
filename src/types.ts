@@ -1,5 +1,5 @@
 import type Serverless from 'serverless';
-import { type Output } from 'serverless/aws';
+import type { Output } from 'serverless/aws';
 
 export type Maybe<T> = null | undefined | T;
 

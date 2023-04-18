@@ -22,3 +22,5 @@ functions:
 
 custom:
   foo: FOO
+  esbuild:
+    plugins: plugins.js

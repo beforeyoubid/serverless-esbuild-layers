@@ -34,18 +34,18 @@ export const isFunctionDefinition = (
  * @param pattern the pattern to check
  * @returns a string list of all the file matches
  */
-const globPromise = async (pattern: string): Promise<string[]> => {
-  const paths = await glob(pattern.replace(/.default$/, '.@(ts|js)?(x)'), { withFileTypes: true });
+export const globPromise = async (pattern: string): Promise<string[]> => {
+  const paths = await glob(pattern.replace(/\.(?!(?:j|t)sx?$)\w+$/, '.@(ts|js)?(x)'), { withFileTypes: true });
   const basePath = pattern.includes('/') ? pattern.replace(/(.+)\/.+$/, (_full, match) => match) : '';
   return paths.map(p => path.join(basePath, p.name));
 };
 
 /**
- *
- * @param specifiedEntries
- * @returns
+ * function to resolve serverless entry parts to strings
+ * @param specifiedEntries the entry keys
+ * @returns a string list of the resolved entries
  */
-async function findEntriesSpecified(specifiedEntries: string | string[]) {
+export async function findEntriesSpecified(specifiedEntries: string | string[]) {
   let entries = specifiedEntries;
   if (typeof specifiedEntries === 'string') {
     entries = [specifiedEntries];
@@ -53,6 +53,7 @@ async function findEntriesSpecified(specifiedEntries: string | string[]) {
   if (!Array.isArray(entries)) {
     return [];
   }
+  if (entries.length === 0) return [];
   const allMapped = await Promise.all(entries.map(globPromise));
   return allMapped.reduce((arr, list) => arr.concat(list), []);
 }
@@ -131,7 +132,8 @@ export async function getExternalModules(
   const entries = await resolvedEntries(serverless, layerRefName);
   if (entries.length === 0) return [];
   let modules: esbuild.Plugin[] = [];
-  const pluginFile = serverless.service.custom?.esbuild?.plugins;
+  const esbuildConfig = serverless.service.custom?.esbuild ?? {};
+  const pluginFile = esbuildConfig.plugins;
   if (pluginFile) {
     try {
       const resolvedPath = path.resolve(process.cwd(), pluginFile);
@@ -143,13 +145,14 @@ export async function getExternalModules(
     }
   }
   const result = await esbuild.build({
+    loader: esbuildConfig?.loader,
     entryPoints: entries,
     plugins: [nodeExternalsPlugin(), ...modules],
     metafile: true,
     bundle: true,
     platform: 'node',
     logLevel: 'silent',
-    outfile: '.serverless/tmp_build_file',
+    outdir: '.serverless/tmp_build',
   });
 
   const importedModules = Object.values(result.metafile.outputs).map(({ imports }) => imports.map(i => i.path));
@@ -166,15 +169,35 @@ export async function getExternalModules(
     [...importedModules, ...requiredModules]
       .reduce((list, listsOfMods) => list.concat(...listsOfMods), [])
       .filter(module => !isBuiltinModule(module))
+      .map(fixModuleName)
   );
   return Array.from(imports)
     .filter(dep => !DEFAULT_AWS_MODULES.includes(dep) && !config.forceExclude.includes(dep))
     .concat(config.forceInclude);
 }
 
+/**
+ * function to merge the user config with the default config to create a complete config
+ * @param userConfig the user's config
+ * @returns a complete config object
+ */
 export function compileConfig(userConfig: Partial<Config>): Config {
   return {
     ...DEFAULT_CONFIG,
     ...userConfig,
   };
+}
+
+/**
+ * function to fix a module name
+ * @param mod the module name
+ * @returns the fixed module name
+ */
+export function fixModuleName(mod: string): string {
+  if (mod.startsWith('@')) {
+    const [group, packageName] = mod.split('/');
+    return `${group}/${packageName}`;
+  }
+  const [packageName] = mod.split('/');
+  return packageName;
 }

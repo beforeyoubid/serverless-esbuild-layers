@@ -14,6 +14,20 @@ module.exports = {
     es6: true,
     node: true,
   },
+  rules: {
+    'require-jsdoc': [
+      'error',
+      {
+        require: {
+          FunctionDeclaration: true,
+          MethodDefinition: true,
+          ClassDeclaration: true,
+          FunctionExpression: true,
+          ArrowFunctionExpression: true,
+        },
+      },
+    ],
+  },
   overrides: [
     {
       files: ['*.js'],
@@ -22,9 +36,16 @@ module.exports = {
       },
     },
     {
+      files: ['**.test.ts', '**/__tests/**.*'],
+      rules: {
+        'require-jsdoc': 0,
+      },
+    },
+    {
       files: ['module_test/**/*'],
       rules: {
         'import/no-unresolved': 0,
+        'require-jsdoc': 0,
       },
     },
     {

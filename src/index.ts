@@ -144,7 +144,7 @@ class EsbuildLayersPlugin implements Plugin {
     const deps: Record<string, string> = {};
     for (const [name, version] of Object.entries(depsWithVersion)) {
       if (!version) {
-        this.log.warning(`Skipping ${name} as it is not defined in the package.json folder`);
+        this.log.verbose(`Skipping ${name} as it is not defined in the package.json folder`);
         continue;
       }
       deps[name] = version;
@@ -158,32 +158,38 @@ class EsbuildLayersPlugin implements Plugin {
         const depPackageJson = JSON.parse(depPackageJsonText) as PackageJsonFile;
         const { peerDependencies, peerDependenciesMeta } = depPackageJson;
         for (const [peerDepName] of Object.entries(peerDependencies ?? {})) {
-          const optional = peerDependenciesMeta?.[peerDepName]?.optional ?? false;
-          if (optional) {
-            this.log.warning(`Skipping peer dep ${peerDepName} of package ${name} as it is optional`);
-            continue;
-          }
-
-          if (deps[peerDepName]) {
-            this.log.warning(
-              `Skipping peer dep ${peerDepName} of package ${name} as it is already added at the root level`
-            );
-            continue;
-          }
-          const peerPackageJsonText = await fs.promises.readFile(
-            path.join(basePath, 'node_modules', ...peerDepName.split('/'), 'package.json'),
-            {
-              encoding: 'utf-8',
+          try {
+            const optional = peerDependenciesMeta?.[peerDepName]?.optional ?? false;
+            if (optional) {
+              this.log.verbose(`Skipping peer dep ${peerDepName} of package ${name} as it is optional`);
+              continue;
             }
-          );
-          const peerPackageJson = JSON.parse(peerPackageJsonText) as PackageJsonFile;
-          if (!peerPackageJson.version) {
-            throw new Error(`Submodule ${peerDepName} is missing version in its package.json file`);
+
+            if (deps[peerDepName]) {
+              this.log.verbose(
+                `Skipping peer dep ${peerDepName} of package ${name} as it is already added at the root level`
+              );
+              continue;
+            }
+            const peerPackageJsonText = await fs.promises.readFile(
+              path.join(basePath, 'node_modules', ...peerDepName.split('/'), 'package.json'),
+              {
+                encoding: 'utf-8',
+              }
+            );
+            const peerPackageJson = JSON.parse(peerPackageJsonText) as PackageJsonFile;
+            if (!peerPackageJson.version) {
+              throw new Error(`Submodule ${peerDepName} is missing version in its package.json file`);
+            }
+            deps[peerDepName] = peerPackageJson.version;
+          } catch (err) {
+            this.log.warning(`Unable to add peer dep ${peerDepName} for package ${name} as an error occurred`);
+            this.log.verbose(err);
           }
-          deps[peerDepName] = peerPackageJson.version;
         }
       } catch (err) {
         this.log.warning(`Unable to check for peer deps for package ${name} as an error occurred`);
+        this.log.verbose(err);
       }
     }
     return deps;
@@ -283,6 +289,10 @@ class EsbuildLayersPlugin implements Plugin {
     this.log.info(`Cleaned ${filesDeleted.length} files at ${nodeLayerPath}`);
   }
 
+  /**
+   * function to transform the layer resources for cloudformation
+   * @returns the transformed layer resources
+   */
   transformLayerResources(): TransformedLayerResources {
     const layers = getLayers(this.serverless);
     const { compiledCloudFormationTemplate: cf } = this.serverless.service.provider;

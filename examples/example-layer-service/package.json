@@ -1,0 +1,12 @@
+{
+  "name": "example-layer-service",
+  "version": "1.0.0",
+  "description": "Example service",
+  "scripts": {},
+  "author": "Henrik Hall",
+  "license": "ISC",
+  "dependencies": {
+    "serverless-webpack-layers": "^2.0.0",
+    "lodash": "*"
+  }
+}

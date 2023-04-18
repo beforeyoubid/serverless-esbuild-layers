@@ -72,9 +72,11 @@ cc-test-reporter
 module_test/storage
 module_test/yarn.lock
 module_test/.serverless
+module_test/.esbuild
 module_test/artifacts
 
 dist
 
 Bar/
 Foo/
+.serverless

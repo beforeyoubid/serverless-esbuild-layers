@@ -1,0 +1,34 @@
+service: example-layer-service
+provider:
+  name: aws
+  runtime: nodejs14.x
+  stage: ${opt:stage}
+
+plugins:
+  - serverless-esbuild-layers
+  - serverless-esbuild
+
+layers:
+  lib:
+    path: '.serverless'
+    name: layer-${self:provider.stage}
+    description: node_modules
+    compatibleRuntimes:
+      - nodejs14.x
+
+functions:
+  hello:
+    handler: handler.default
+    layers:
+      - { Ref: LibLambdaLayer }
+
+custom:
+  esbuild:
+    packager: yarn
+    plugins: esbuild-plugins.js
+    exclude:
+      - '*'
+
+package:
+  path: artifacts
+  excludeDevDependencies: false

@@ -41,11 +41,11 @@ const globPromise = async (pattern: string): Promise<string[]> => {
 };
 
 /**
- *
- * @param specifiedEntries
- * @returns
+ * function to resolve serverless entry parts to strings
+ * @param specifiedEntries the entry keys
+ * @returns a string list of the resolved entries
  */
-async function findEntriesSpecified(specifiedEntries: string | string[]) {
+export async function findEntriesSpecified(specifiedEntries: string | string[]) {
   let entries = specifiedEntries;
   if (typeof specifiedEntries === 'string') {
     entries = [specifiedEntries];
@@ -53,6 +53,7 @@ async function findEntriesSpecified(specifiedEntries: string | string[]) {
   if (!Array.isArray(entries)) {
     return [];
   }
+  if (entries.length === 0) return [];
   const allMapped = await Promise.all(entries.map(globPromise));
   return allMapped.reduce((arr, list) => arr.concat(list), []);
 }

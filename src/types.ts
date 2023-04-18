@@ -38,7 +38,7 @@ export type Packager = 'npm' | 'yarn' | 'pnpm';
 
 export type Config = {
   packager: Packager | 'auto';
-  level: Level;
+  level: LevelName;
   clean: boolean;
   minify: boolean;
 };
@@ -49,3 +49,5 @@ export enum Level {
   verbose = 2,
   debug = 3,
 }
+
+export type LevelName = keyof typeof Level;

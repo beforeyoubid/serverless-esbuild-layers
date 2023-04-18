@@ -11,6 +11,7 @@ import { DEFAULT_CONFIG } from './constants';
 
 import { exec as execNonPromise, ExecOptions, ExecException } from 'child_process';
 import util from 'util';
+import { error } from './logger';
 
 /**
  * TypeScript typeguard to ensure the type is not null or undefined
@@ -124,9 +125,21 @@ export function getLayers(serverless: Serverless): { [key: string]: Layer } {
 export async function getExternalModules(serverless: Serverless, layerRefName: string): Promise<string[]> {
   const entries = await resolvedEntries(serverless, layerRefName);
   if (entries.length === 0) return [];
+  let modules: esbuild.Plugin[] = [];
+  const pluginFile = serverless.service.custom?.esbuild?.plugins;
+  if (pluginFile) {
+    try {
+      const resolvedPath = path.resolve(process.cwd(), pluginFile);
+      modules = await import(resolvedPath).then(i => i.default);
+      modules = modules.filter(m => m.name !== 'node-externals');
+    } catch (err) {
+      error(`Unable to import your plugin file (${pluginFile}) due to error:`);
+      console.error(err);
+    }
+  }
   const result = await esbuild.build({
     entryPoints: entries,
-    plugins: [nodeExternalsPlugin()],
+    plugins: [nodeExternalsPlugin(), ...modules],
     metafile: true,
     bundle: true,
     platform: 'node',
@@ -135,12 +148,14 @@ export async function getExternalModules(serverless: Serverless, layerRefName: s
   });
 
   const importedModules = Object.values(result.metafile.outputs).map(({ imports }) => imports.map(i => i.path));
-  const requiredModules = Object.values(result.metafile.inputs).map(({ imports }) =>
-    imports
-      .filter(i => i.path.startsWith('node_modules'))
-      .map(i => i.original)
-      .filter(notEmpty)
-  );
+  const requiredModules = Object.entries(result.metafile.inputs)
+    .filter(([key]) => !key.startsWith('node_modules'))
+    .map(([, { imports }]) =>
+      imports
+        .filter(i => i.path.startsWith('node_modules'))
+        .map(i => i.original)
+        .filter(notEmpty)
+    );
 
   const imports = new Set(
     [...importedModules, ...requiredModules]

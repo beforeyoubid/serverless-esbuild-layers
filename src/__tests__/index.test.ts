@@ -53,6 +53,9 @@ function createSls(layerConfig = {}) {
       },
       custom: {
         'esbuild-layers': layerConfig,
+        esbuild: {
+          plugins: 'examples/example-layer-service/plugins.js',
+        },
       },
       functions: {
         hello: {

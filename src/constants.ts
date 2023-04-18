@@ -1,4 +1,4 @@
-import { type Packager, type Config, Level } from './types';
+import { type Packager, type Config } from './types';
 
 export const PACKAGER_INSTALL_COMMAND: Record<Packager, string> = {
   npm: 'npm install',
@@ -20,7 +20,7 @@ export const PACKAGER_LOCK_FILE_NAMES: Record<Packager, string> = {
 
 export const DEFAULT_CONFIG: Config = {
   packager: 'auto',
-  level: Level.info,
+  level: 'info',
   clean: true,
   minify: false,
 };

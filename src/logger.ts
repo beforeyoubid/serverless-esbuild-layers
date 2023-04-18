@@ -14,20 +14,18 @@ export function warn(...s: unknown[]) {
   console.warn('[esbuild-layers]', ...s);
 }
 
+/** function to build a specific levelled-logger */
+const buildLogger =
+  (targetLevel: Level) =>
+  ({ level }: { level: LevelName }, ...s: unknown[]) =>
+    Number(Level[level]) >= targetLevel && log(...s);
+
 /** function to log a verbose message console */
-export function verbose({ level }: { level: LevelName }, ...s: unknown[]) {
-  Number(Level[level]) >= Level.verbose && log(...s);
-}
-
+export const verbose = buildLogger(Level.verbose);
 /** function to log an info message console */
-export function info({ level }: { level: LevelName }, ...s: unknown[]) {
-  Number(Level[level]) >= Level.info && log(...s);
-}
-
+export const info = buildLogger(Level.info);
 /** function to log a debug message console */
-export function debug({ level }: { level: LevelName }, ...s: unknown[]) {
-  Number(Level[level]) >= Level.debug && log(...s);
-}
+export const debug = buildLogger(Level.debug);
 
 /** function to create a serverless compatible logger instance */
 export const Log = (level: LevelName): Plugin.Logging['log'] => ({

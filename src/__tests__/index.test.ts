@@ -137,27 +137,13 @@ describe(`Plugin tests`, () => {
     expect(installedLayers).toHaveLength(2);
   });
 
-  it(`should export layers successfully`, () => {
-    const sls = createSls({
-      exportLayers: true,
-      upgradeLayerReferences: false,
-    });
-    const plugin = createMockPlugin(sls);
+  it(`should export layers successfully`, async () => {
+    const sls = createSls({});
+    const plugin = createPlugin(sls);
 
+    await plugin.installLayers();
     const { exportedLayers, upgradedLayerReferences } = plugin.transformLayerResources();
-    expect(exportedLayers).toHaveLength(2);
-    expect(upgradedLayerReferences).toHaveLength(0);
-  });
-
-  it(`should upgrade versioned layer references successfully`, () => {
-    const sls = createSls({
-      exportLayers: false,
-      upgradeLayerReferences: true,
-    });
-    const plugin = createMockPlugin(sls);
-
-    const { exportedLayers, upgradedLayerReferences } = plugin.transformLayerResources();
-    expect(exportedLayers).toHaveLength(0);
+    expect(exportedLayers).toHaveLength(1);
     expect(upgradedLayerReferences).toHaveLength(1);
   });
 });

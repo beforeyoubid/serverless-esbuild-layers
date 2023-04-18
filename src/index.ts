@@ -37,6 +37,7 @@ class EsbuildLayersPlugin implements Plugin {
   config: Config;
   level: Level;
   log: Plugin.Logging['log'];
+  installedLayerNames: Set<string>;
 
   /**
    * plugin constructor
@@ -47,6 +48,7 @@ class EsbuildLayersPlugin implements Plugin {
       'package:initialize': this.installLayers.bind(this),
       'before:deploy:deploy': this.transformLayerResources.bind(this),
     };
+    this.installedLayerNames = new Set();
 
     this.serverless = serverless;
     this.region = serverless.service.provider.region;
@@ -109,6 +111,7 @@ class EsbuildLayersPlugin implements Plugin {
       if (!installed) continue;
       await this.cleanup(layer.path);
       installedLayers.push(layer);
+      this.installedLayerNames.add(name);
     }
     this.log.info(`Installed ${installedLayers.length} layer${installedLayers.length > 1 ? 's' : ''}`);
     return { installedLayers };
@@ -201,8 +204,8 @@ class EsbuildLayersPlugin implements Plugin {
         await fs.promises.mkdir(nodeLayerPath, { recursive: true });
       }
       const dependencies = await this.fetchModulesForLayer(layerName);
-      const fileName = PACKAGER_LOCK_FILE_NAMES[this.packager];
       if (Object.keys(dependencies).length === 0) return false;
+      const fileName = PACKAGER_LOCK_FILE_NAMES[this.packager];
       try {
         await fs.promises.copyFile(path.join(process.cwd(), fileName), path.join(nodeLayerPath, fileName));
         const packageJsonText = await fs.promises.readFile(path.join(basePath, 'package.json'), { encoding: 'utf-8' });
@@ -284,7 +287,7 @@ class EsbuildLayersPlugin implements Plugin {
     const layers = getLayers(this.serverless);
     const { compiledCloudFormationTemplate: cf } = this.serverless.service.provider;
 
-    const layersKeys = Object.keys(layers);
+    const layersKeys = Object.keys(layers).filter(name => this.installedLayerNames.has(name));
 
     const transformedResources = layersKeys.reduce(
       (result: Maybe<TransformedLayerResources>, id: string) => {

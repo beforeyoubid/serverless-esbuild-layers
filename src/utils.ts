@@ -7,7 +7,7 @@ import nodeExternalsPlugin from 'esbuild-node-externals';
 import isBuiltinModule from 'is-builtin-module';
 
 import type { Maybe, FunctionWithConfig, Layer, Config } from './types';
-import { DEFAULT_CONFIG } from './constants';
+import { DEFAULT_CONFIG, DEFAULT_AWS_MODULES } from './constants';
 
 import { exec as execNonPromise, ExecOptions, ExecException } from 'child_process';
 import util from 'util';
@@ -162,7 +162,7 @@ export async function getExternalModules(serverless: Serverless, layerRefName: s
       .reduce((list, listsOfMods) => list.concat(...listsOfMods), [])
       .filter(module => !isBuiltinModule(module))
   );
-  return Array.from(imports);
+  return Array.from(imports).filter(dep => !DEFAULT_AWS_MODULES.includes(dep));
 }
 
 export function compileConfig(userConfig: Partial<Config>): Config {

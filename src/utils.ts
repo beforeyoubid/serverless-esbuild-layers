@@ -133,9 +133,17 @@ export async function getExternalModules(serverless: Serverless, layerRefName: s
     logLevel: 'silent',
     outfile: '.serverless/tmp_build_file',
   });
+
+  const importedModules = Object.values(result.metafile.outputs).map(({ imports }) => imports.map(i => i.path));
+  const requiredModules = Object.values(result.metafile.inputs).map(({ imports }) =>
+    imports
+      .filter(i => i.path.startsWith('node_modules'))
+      .map(i => i.original)
+      .filter(notEmpty)
+  );
+
   const imports = new Set(
-    Object.values(result.metafile.outputs)
-      .map(({ imports }) => imports.map(i => i.path))
+    [...importedModules, ...requiredModules]
       .reduce((list, listsOfMods) => list.concat(...listsOfMods), [])
       .filter(module => !isBuiltinModule(module))
   );

@@ -1,7 +1,7 @@
 service: example-layer-service
 provider:
   name: aws
-  runtime: nodejs12.x
+  runtime: nodejs14.x
   stage: ${opt:stage}
 
 plugins:
@@ -31,3 +31,4 @@ custom:
 
 package:
   path: artifacts
+  excludeDevDependencies: false

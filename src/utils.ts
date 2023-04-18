@@ -135,12 +135,14 @@ export async function getExternalModules(serverless: Serverless, layerRefName: s
   });
 
   const importedModules = Object.values(result.metafile.outputs).map(({ imports }) => imports.map(i => i.path));
-  const requiredModules = Object.values(result.metafile.inputs).map(({ imports }) =>
-    imports
-      .filter(i => i.path.startsWith('node_modules'))
-      .map(i => i.original)
-      .filter(notEmpty)
-  );
+  const requiredModules = Object.entries(result.metafile.inputs)
+    .filter(([key]) => !key.startsWith('node_modules'))
+    .map(([, { imports }]) =>
+      imports
+        .filter(i => i.path.startsWith('node_modules'))
+        .map(i => i.original)
+        .filter(notEmpty)
+    );
 
   const imports = new Set(
     [...importedModules, ...requiredModules]

@@ -18,5 +18,3 @@ exclude_patterns:
 plugins:
   nodesecurity:
     enabled: true
-  eslint:
-    enabled: false

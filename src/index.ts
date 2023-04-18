@@ -128,6 +128,7 @@ class EsbuildLayersPlugin implements Plugin {
     const layerRefName = `${layerName.replace(/^./, x => x.toUpperCase())}LambdaLayer`;
 
     const dependencies = await getExternalModules(this.serverless, layerRefName);
+    if (dependencies.length === 0) return {};
     const packageJsonText = await fs.promises.readFile(path.join(basePath, 'package.json'), { encoding: 'utf-8' });
     const packageJson = JSON.parse(packageJsonText) as PackageJsonFile;
     const depsWithVersion = dependencies.reduce(
@@ -201,6 +202,7 @@ class EsbuildLayersPlugin implements Plugin {
       }
       const dependencies = await this.fetchModulesForLayer(layerName);
       const fileName = PACKAGER_LOCK_FILE_NAMES[this.packager];
+      if (Object.keys(dependencies).length === 0) return false;
       try {
         await fs.promises.copyFile(path.join(process.cwd(), fileName), path.join(nodeLayerPath, fileName));
         const packageJsonText = await fs.promises.readFile(path.join(basePath, 'package.json'), { encoding: 'utf-8' });

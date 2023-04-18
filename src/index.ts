@@ -144,7 +144,7 @@ class EsbuildLayersPlugin implements Plugin {
     const deps: Record<string, string> = {};
     for (const [name, version] of Object.entries(depsWithVersion)) {
       if (!version) {
-        this.log.warning(`Skipping ${name} as it is not defined in the package.json folder`);
+        this.log.verbose(`Skipping ${name} as it is not defined in the package.json folder`);
         continue;
       }
       deps[name] = version;
@@ -184,6 +184,7 @@ class EsbuildLayersPlugin implements Plugin {
         }
       } catch (err) {
         this.log.warning(`Unable to check for peer deps for package ${name} as an error occurred`);
+        this.log.verbose(err);
       }
     }
     return deps;

@@ -167,6 +167,7 @@ export async function getExternalModules(
     [...importedModules, ...requiredModules]
       .reduce((list, listsOfMods) => list.concat(...listsOfMods), [])
       .filter(module => !isBuiltinModule(module))
+      .map(fixModuleName)
   );
   return Array.from(imports).filter(dep => !DEFAULT_AWS_MODULES.includes(dep) && !forceExclude.includes(dep));
 }
@@ -181,4 +182,18 @@ export function compileConfig(userConfig: Partial<Config>): Config {
     ...DEFAULT_CONFIG,
     ...userConfig,
   };
+}
+
+/**
+ * function to fix a module name
+ * @param mod the module name
+ * @returns the fixed module name
+ */
+export function fixModuleName(mod: string): string {
+  if (mod.startsWith('@')) {
+    const [group, packageName] = mod.split('/');
+    return `${group}/${packageName}`;
+  }
+  const [packageName] = mod.split('/');
+  return packageName;
 }

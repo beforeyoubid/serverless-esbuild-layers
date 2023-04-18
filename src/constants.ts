@@ -24,6 +24,7 @@ export const DEFAULT_CONFIG: Config = {
   clean: true,
   minify: false,
   forceExclude: [],
+  forceInclude: [],
 };
 
 export const DEFAULT_AWS_MODULES: string[] = ['aws-sdk'];

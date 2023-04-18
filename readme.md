@@ -82,6 +82,8 @@ custom:
     packager: 'auto' # can be specified as 'npm' | 'yarn' | 'pnpm';
     forceExclude:
       - some-library
+    forceInclude:
+      - some-other-library
 ```
 
 [serverless]: https://www.serverless.com/

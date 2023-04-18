@@ -38,7 +38,7 @@ export type Packager = 'npm' | 'yarn' | 'pnpm';
 
 export type Config = {
   packager: Packager | 'auto';
-  level: Level;
+  level: keyof typeof Level;
   clean: boolean;
   minify: boolean;
 };

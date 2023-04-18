@@ -11,24 +11,24 @@ export function warn(...s: unknown[]) {
   console.warn('[esbuild-layers]', ...s);
 }
 
-export function verbose({ level }: { level: Level }, ...s: unknown[]) {
+export function verbose({ level }: { level: keyof typeof Level }, ...s: unknown[]) {
   Number(Level[level]) >= Level.verbose && log(...s);
 }
 
-export function info({ level }: { level: Level }, ...s: unknown[]) {
+export function info({ level }: { level: keyof typeof Level }, ...s: unknown[]) {
   Number(Level[level]) >= Level.info && log(...s);
 }
 
-export function debug({ level }: { level: Level }, ...s: unknown[]) {
+export function debug({ level }: { level: keyof typeof Level }, ...s: unknown[]) {
   Number(Level[level]) >= Level.debug && log(...s);
 }
 
-export const Log: Plugin.Logging['log'] = {
-  info,
-  debug,
-  verbose,
+export const Log = (level: keyof typeof Level): Plugin.Logging['log'] => ({
+  info: info.bind(level),
+  debug: debug.bind(level),
+  verbose: verbose.bind(level),
   error,
   warning: warn,
   notice: info,
   success: info,
-};
+});

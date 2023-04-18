@@ -13,7 +13,7 @@ import {
   Layer,
   Packager,
   Config,
-  Level,
+  LevelName,
   TransformedLayerResources,
   Maybe,
   FunctionLayerReference,
@@ -35,7 +35,7 @@ class EsbuildLayersPlugin implements Plugin {
   region: string;
   packager: Packager;
   config: Config;
-  level: keyof typeof Level;
+  level: LevelName;
   log: Plugin.Logging['log'];
   installedLayerNames: Set<string>;
 

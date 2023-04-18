@@ -150,7 +150,7 @@ export async function getExternalModules(
     bundle: true,
     platform: 'node',
     logLevel: 'silent',
-    outfile: '.serverless/tmp_build_file',
+    outdir: '.serverless/tmp_build',
   });
 
   const importedModules = Object.values(result.metafile.outputs).map(({ imports }) => imports.map(i => i.path));

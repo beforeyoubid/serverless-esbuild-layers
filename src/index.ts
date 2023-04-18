@@ -3,11 +3,10 @@ import path from 'path';
 import del from 'del';
 import pascalcase from 'pascalcase';
 import minifyAll from 'minify-all-js';
-import { findDependencies, findPackagePaths } from 'esbuild-node-externals/dist/utils';
 
 import type Serverless from 'serverless';
 import type Plugin from 'serverless/classes/Plugin';
-import { type CloudFormationResource, type Output } from 'serverless/aws';
+import type { CloudFormationResource, Output } from 'serverless/aws';
 
 import {
   PackageJsonFile,
@@ -21,7 +20,7 @@ import {
 } from './types';
 import { PACKAGER_ADD_COMMAND, PACKAGER_LOCK_FILE_NAMES } from './constants';
 import { compileConfig, getExternalModules, getLayers, exec } from './utils';
-import { info, verbose, Log } from './logger';
+import { Log } from './logger';
 
 const basePath = process.cwd();
 
@@ -99,8 +98,10 @@ class EsbuildLayersPlugin implements Plugin {
    * function to install all layers
    *
    * this runs as a serverless hook
+   *
+   * @returns a list of installed layers
    */
-  async installLayers(): Promise<void> {
+  async installLayers(): Promise<{ installedLayers: Layer[] }> {
     const installedLayers: Layer[] = [];
     const layers = getLayers(this.serverless);
     for (const [name, layer] of Object.entries(layers)) {
@@ -110,6 +111,7 @@ class EsbuildLayersPlugin implements Plugin {
       installedLayers.push(layer);
     }
     this.log.info(`Installed ${installedLayers.length} layer${installedLayers.length > 1 ? 's' : ''}`);
+    return { installedLayers };
   }
   /**
    * locate the node modules used for a particular layer
@@ -131,7 +133,7 @@ class EsbuildLayersPlugin implements Plugin {
     const depsWithVersion = dependencies.reduce(
       (obj, dep) => ({
         ...obj,
-        [dep]: (packageJson.dependencies?.[dep] || packageJson.devDependencies?.[dep]) ?? '*',
+        [dep]: packageJson.dependencies?.[dep] ?? packageJson.devDependencies?.[dep] ?? '*',
       }),
       {} as Record<string, string>
     );
@@ -276,7 +278,7 @@ class EsbuildLayersPlugin implements Plugin {
     this.log.info(`Cleaned ${filesDeleted.length} files at ${nodeLayerPath}`);
   }
 
-  async transformLayerResources(): Promise<TransformedLayerResources> {
+  transformLayerResources(): TransformedLayerResources {
     const layers = getLayers(this.serverless);
     const { compiledCloudFormationTemplate: cf } = this.serverless.service.provider;
 

@@ -18,3 +18,9 @@ exclude_patterns:
 plugins:
   nodesecurity:
     enabled: true
+  eslint:
+    enabled: false
+    channel: 'eslint-7'
+    config:
+      config: .eslintrc.js
+      ignore_warnings: true

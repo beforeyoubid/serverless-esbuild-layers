@@ -1,5 +1,5 @@
 import Serverless from 'serverless';
-import { notEmpty, isFunctionDefinition, fixModuleName, findEntriesSpecified } from '../utils';
+import { notEmpty, isFunctionDefinition, fixModuleName, findEntriesSpecified, globPromise } from '../utils';
 
 describe('notEmpty', () => {
   it('should false for null', () => {
@@ -37,6 +37,36 @@ describe('fixModuleName', () => {
     });
   }
 });
+
+describe('globPromise', () => {
+  it('will match .default', async () => {
+    const res = await globPromise('examples/example-layer-service/hello.default');
+    expect(res).toEqual(['examples/example-layer-service/hello.js']);
+  });
+  it('will match an export key', async () => {
+    const res = await globPromise('examples/example-layer-service/hello.someExport');
+    expect(res).toEqual(['examples/example-layer-service/hello.js']);
+  });
+  it('will match file type', async () => {
+    const res = await globPromise('examples/example-layer-service/hello.js');
+    expect(res).toEqual(['examples/example-layer-service/hello.js']);
+  });
+  describe('will match files with no folder', () => {
+    it('will match .default', async () => {
+      const res = await globPromise('.eslintrc.default');
+      expect(res).toEqual(['.eslintrc.js']);
+    });
+    it('will match an export key', async () => {
+      const res = await globPromise('.eslintrc.someExport');
+      expect(res).toEqual(['.eslintrc.js']);
+    });
+    it('will match file type', async () => {
+      const res = await globPromise('.eslintrc.default');
+      expect(res).toEqual(['.eslintrc.js']);
+    });
+  });
+});
+
 describe('findEntriesSpecified', () => {
   it('if given a string it will handle it', async () => {
     const key = 'examples/example-layer-service/hello.default';

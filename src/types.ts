@@ -42,6 +42,7 @@ export type Config = {
   clean: boolean;
   minify: boolean;
   forceExclude: string[];
+  forceInclude: string[];
 };
 
 export enum Level {

@@ -26,4 +26,4 @@ export const DEFAULT_CONFIG: Config = {
   forceExclude: [],
 };
 
-export const DEFAULT_AWS_MODULES: string[] = ['aws-sdk', 'aws-xray-sdk'];
+export const DEFAULT_AWS_MODULES: string[] = ['aws-sdk'];

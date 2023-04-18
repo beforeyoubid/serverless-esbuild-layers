@@ -6,7 +6,8 @@
   "author": "Henrik Hall",
   "license": "ISC",
   "dependencies": {
-    "serverless-webpack-layers": "^2.0.0",
+    "serverless-esbuild-layers": "*",
+    "serverless-esbuild": "*",
     "lodash": "*"
   }
 }

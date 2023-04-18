@@ -122,7 +122,11 @@ export function getLayers(serverless: Serverless): { [key: string]: Layer } {
  * @param layerRefName the name of the layer to check
  * @returns an array of strings containing the layer's modules
  */
-export async function getExternalModules(serverless: Serverless, layerRefName: string): Promise<string[]> {
+export async function getExternalModules(
+  serverless: Serverless,
+  forceExclude: string[],
+  layerRefName: string
+): Promise<string[]> {
   const entries = await resolvedEntries(serverless, layerRefName);
   if (entries.length === 0) return [];
   let modules: esbuild.Plugin[] = [];
@@ -162,7 +166,7 @@ export async function getExternalModules(serverless: Serverless, layerRefName: s
       .reduce((list, listsOfMods) => list.concat(...listsOfMods), [])
       .filter(module => !isBuiltinModule(module))
   );
-  return Array.from(imports).filter(dep => !DEFAULT_AWS_MODULES.includes(dep));
+  return Array.from(imports).filter(dep => !DEFAULT_AWS_MODULES.includes(dep) && !forceExclude.includes(dep));
 }
 
 export function compileConfig(userConfig: Partial<Config>): Config {

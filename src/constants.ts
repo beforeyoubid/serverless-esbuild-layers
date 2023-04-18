@@ -23,6 +23,7 @@ export const DEFAULT_CONFIG: Config = {
   level: 'info',
   clean: true,
   minify: false,
+  forceExclude: [],
 };
 
 export const DEFAULT_AWS_MODULES: string[] = ['aws-sdk', 'aws-xray-sdk'];

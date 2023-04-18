@@ -103,7 +103,7 @@ jobs:
           command: |
             cd module_test
             yarn install --registry http://localhost:4873
-            timeout 35 yarn sls package || echo package failed
+            timeout 35 yarn sls package --stage=test || echo package failed
             yarn test
       - save_cache:
           key: node_modules-{{ checksum "yarn.lock" }}

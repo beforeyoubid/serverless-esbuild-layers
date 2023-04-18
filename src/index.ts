@@ -35,7 +35,7 @@ class EsbuildLayersPlugin implements Plugin {
   region: string;
   packager: Packager;
   config: Config;
-  level: Level;
+  level: keyof typeof Level;
   log: Plugin.Logging['log'];
   installedLayerNames: Set<string>;
 
@@ -53,8 +53,8 @@ class EsbuildLayersPlugin implements Plugin {
     this.serverless = serverless;
     this.region = serverless.service.provider.region;
     this.config = compileConfig(serverless.service.custom['esbuild-layers'] ?? {});
-    this.level = options.verbose ? Level.verbose : this.config.level;
-    this.log = logging?.log ?? Log;
+    this.level = options.verbose ? 'verbose' : this.config.level;
+    this.log = logging?.log ?? Log(this.level);
 
     const packager = this.config.packager;
     if (packager === 'auto') {

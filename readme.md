@@ -80,6 +80,8 @@ This library can be configured by adding options into your serverless file:
 custom:
   esbuild-layers:
     packager: 'auto' # can be specified as 'npm' | 'yarn' | 'pnpm';
+    forceExclude:
+      - some-library
 ```
 
 [serverless]: https://www.serverless.com/

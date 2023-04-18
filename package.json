@@ -1,6 +1,6 @@
 {
   "name": "serverless-esbuild-layers",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": {
     "name": "Bailey Sheather",
     "email": "bailey@beforeyoubid.com.au",
@@ -26,7 +26,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/beforeyoubid/serverless-webpack-layers.git"
+    "url": "git+https://github.com/beforeyoubid/serverless-esbuild-layers.git"
   },
   "keywords": [
     "serverless",
@@ -36,9 +36,9 @@
     "esbuild"
   ],
   "bugs": {
-    "url": "https://github.com/beforeyoubid/serverless-webpack-layers/issues"
+    "url": "https://github.com/beforeyoubid/serverless-esbuild-layers/issues"
   },
-  "homepage": "https://github.com/beforeyoubid/serverless-webpack-layers#readme",
+  "homepage": "https://github.com/beforeyoubid/serverless-esbuild-layers#readme",
   "devDependencies": {
     "@babel/cli": "^7.21.0",
     "@babel/core": "^7.21.4",

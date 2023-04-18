@@ -1,0 +1,24 @@
+service: example-layer-service
+provider:
+  name: aws
+  runtime: nodejs12.x
+
+plugins:
+  - serverless-esbuild-layers
+
+layers:
+  myLib:
+    path: ./my-lib
+    name: my-lib
+    description: My library
+    retain: true
+
+functions:
+  hello:
+    handler: hello.handler
+    layers:
+      # Note the reference being the TitleCase representation of the layer id followed by "LambdaLayer"
+      - { Ref: MyLibLambdaLayer }
+
+custom:
+  foo: FOO

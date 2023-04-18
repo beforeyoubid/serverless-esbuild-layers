@@ -64,8 +64,7 @@ async function findEntriesSpecified(specifiedEntries: string | string[]) {
  */
 export async function resolvedEntries(sls: Serverless, layerRefName: string) {
   const newEntries: Set<string> = new Set();
-  const backupFileType =
-    sls.service.custom.layerConfig.backupFileType ?? sls.service.custom.layerConfig.webpack.backupFileType ?? 'default';
+  const backupFileType = sls.service.custom?.['esbuild-layers']?.backupFileType ?? 'default';
   for (const func of Object.values(sls.service.functions)) {
     if (!isFunctionDefinition(func)) {
       console.error(`This library doesn't currently support functions with an image`);

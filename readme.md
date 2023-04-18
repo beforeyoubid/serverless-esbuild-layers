@@ -1,5 +1,7 @@
 # serverless-esbuild-layers
 
+[![Test Coverage](https://api.codeclimate.com/v1/badges/e5f4215f1f3f63aad0eb/test_coverage)](https://codeclimate.com/github/beforeyoubid/serverless-esbuild-layers/test_coverage) [![Maintainability](https://api.codeclimate.com/v1/badges/e5f4215f1f3f63aad0eb/maintainability)](https://codeclimate.com/github/beforeyoubid/serverless-esbuild-layers/maintainability)
+
 Plugin for the [Serverless framework][serverless] that allows you to leverage Lambda layers to separate your node modules into layers attached to relevant functions.
 
 This helps to keep the overall function size down.

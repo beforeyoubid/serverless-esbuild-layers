@@ -1,6 +1,6 @@
 {
   "name": "serverless-esbuild-layers",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "author": {
     "name": "Bailey Sheather",
     "email": "bailey@beforeyoubid.com.au",
@@ -9,6 +9,9 @@
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*"
+  ],
   "scripts": {
     "test": "jest --coverage --passWithNoTests",
     "lint": "eslint '**/*.{ts,tsx,js,jsx}' --max-warnings 0",

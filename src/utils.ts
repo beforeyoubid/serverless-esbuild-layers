@@ -130,7 +130,8 @@ export async function getExternalModules(
   const entries = await resolvedEntries(serverless, layerRefName);
   if (entries.length === 0) return [];
   let modules: esbuild.Plugin[] = [];
-  const pluginFile = serverless.service.custom?.esbuild?.plugins;
+  const esbuildConfig = serverless.service.custom?.esbuild ?? {};
+  const pluginFile = esbuildConfig.plugins;
   if (pluginFile) {
     try {
       const resolvedPath = path.resolve(process.cwd(), pluginFile);
@@ -142,6 +143,7 @@ export async function getExternalModules(
     }
   }
   const result = await esbuild.build({
+    loader: esbuildConfig?.loader,
     entryPoints: entries,
     plugins: [nodeExternalsPlugin(), ...modules],
     metafile: true,

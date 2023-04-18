@@ -277,7 +277,10 @@ class EsbuildLayersPlugin implements Plugin {
         .map((p: string) => p.replace(/^!/, '')) ??
       [];
     this.log.info(`Cleaning ${exclude.map(rule => path.join(nodeLayerPath, rule)).join(', ')}`);
-    const filesDeleted = await del(exclude.map(rule => path.join(nodeLayerPath, rule)));
+    let filesDeleted: string[] = [];
+    try {
+      filesDeleted = await del(exclude.map(rule => path.join(nodeLayerPath, rule)));
+    } catch (_err) {}
     if (fs.existsSync(nodeLayerPath) && minify) {
       await minifyAll(nodeLayerPath, {
         compress_json: true,

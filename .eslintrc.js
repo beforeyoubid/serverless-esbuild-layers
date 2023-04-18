@@ -14,6 +14,20 @@ module.exports = {
     es6: true,
     node: true,
   },
+  rules: {
+    'require-jsdoc': [
+      'error',
+      {
+        require: {
+          FunctionDeclaration: true,
+          MethodDefinition: true,
+          ClassDeclaration: true,
+          FunctionExpression: true,
+          ArrowFunctionExpression: true,
+        },
+      },
+    ],
+  },
   overrides: [
     {
       files: ['*.js'],

@@ -283,6 +283,10 @@ class EsbuildLayersPlugin implements Plugin {
     this.log.info(`Cleaned ${filesDeleted.length} files at ${nodeLayerPath}`);
   }
 
+  /**
+   * function to transform the layer resources for cloudformation
+   * @returns the transformed layer resources
+   */
   transformLayerResources(): TransformedLayerResources {
     const layers = getLayers(this.serverless);
     const { compiledCloudFormationTemplate: cf } = this.serverless.service.provider;

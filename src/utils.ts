@@ -169,6 +169,11 @@ export async function getExternalModules(
   return Array.from(imports).filter(dep => !DEFAULT_AWS_MODULES.includes(dep) && !forceExclude.includes(dep));
 }
 
+/**
+ * function to merge the user config with the default config to create a complete config
+ * @param userConfig the user's config
+ * @returns a complete config object
+ */
 export function compileConfig(userConfig: Partial<Config>): Config {
   return {
     ...DEFAULT_CONFIG,

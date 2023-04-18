@@ -1,5 +1,5 @@
 import Serverless from 'serverless';
-import { notEmpty, isFunctionDefinition, fixModuleName } from '../utils';
+import { notEmpty, isFunctionDefinition, fixModuleName, findEntriesSpecified } from '../utils';
 
 describe('notEmpty', () => {
   it('should false for null', () => {
@@ -36,4 +36,24 @@ describe('fixModuleName', () => {
       expect(fixModuleName(lib)).toEqual(expectedLib);
     });
   }
+});
+describe('findEntriesSpecified', () => {
+  it('if given a string it will handle it', async () => {
+    const key = 'examples/example-layer-service/hello.default';
+    const res = await findEntriesSpecified(key);
+    expect(res).toEqual(['examples/example-layer-service/hello.js']);
+  });
+  it('if given an array it will handle it', async () => {
+    const key = 'examples/example-layer-service/hello.default';
+    const res = await findEntriesSpecified([key]);
+    expect(res).toEqual(['examples/example-layer-service/hello.js']);
+  });
+  it('if given an empty array it will return nothing', async () => {
+    const res = await findEntriesSpecified([]);
+    expect(res).toEqual([]);
+  });
+  it('if given a bad variable it will return an empty array', async () => {
+    const res = await findEntriesSpecified(123 as unknown as string);
+    expect(res).toEqual([]);
+  });
 });

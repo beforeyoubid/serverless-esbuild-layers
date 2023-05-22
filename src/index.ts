@@ -46,6 +46,7 @@ class EsbuildLayersPlugin implements Plugin {
   constructor(serverless: Serverless, options: Serverless.Options, logging?: Plugin.Logging) {
     this.hooks = {
       'package:initialize': this.installLayers.bind(this),
+      'after:package:createDeploymentArtifacts': this.transformLayerResources.bind(this),
       'before:deploy:deploy': this.transformLayerResources.bind(this),
     };
     this.installedLayerNames = new Set();

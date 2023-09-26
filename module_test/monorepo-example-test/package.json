@@ -6,7 +6,7 @@
     "registry": "http://localhost:4873"
   },
   "scripts": {
-    "test": "cd monorepo-artifacts && cat ./nodejs/package.json | grep remeda | grep 1.27"
+    "test": "cd .serverless && cat ./nodejs/package.json | grep remeda | grep 1.27"
   },
   "devDependencies": {
     "@luckycatfactory/esbuild-graphql-loader": "^3.8.1",

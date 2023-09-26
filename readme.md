@@ -86,6 +86,16 @@ custom:
       - some-other-library
 ```
 
+### Package.json pathing
+
+If using a monorepo, you may need to specify a different package.json file. You can do so by using the `packageJsonPath` config variable like so:
+
+```yaml
+custom:
+  esbuild-layers:
+    packageJsonPath: ../
+```
+
 [serverless]: https://www.serverless.com/
 [serverless-esbuild]: https://github.com/floydspace/serverless-esbuild
 [serverless-webpack]: https://github.com/serverless-heaven/serverless-webpack

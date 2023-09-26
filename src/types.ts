@@ -43,6 +43,7 @@ export type Config = {
   minify: boolean;
   forceExclude: string[];
   forceInclude: string[];
+  packageJsonPath?: string;
 };
 
 export enum Level {

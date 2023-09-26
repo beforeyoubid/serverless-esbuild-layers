@@ -105,6 +105,13 @@ jobs:
             yarn install --registry http://localhost:4873
             timeout 35 yarn sls package --stage=test || echo package failed
             yarn test
+      - run:
+          name: Test layer monorepo example
+          command: |
+            cd module_test/monorepo-example-test
+            yarn install --registry http://localhost:4873
+            timeout 35 yarn sls package --stage=test || echo package failed
+            yarn test
       - save_cache:
           key: node_modules-{{ checksum "yarn.lock" }}
           paths:

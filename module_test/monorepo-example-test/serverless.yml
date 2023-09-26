@@ -1,0 +1,36 @@
+service: monorepo-example-layer-service
+provider:
+  name: aws
+  runtime: nodejs14.x
+  stage: ${opt:stage}
+
+plugins:
+  - serverless-esbuild-layers
+  - serverless-esbuild
+
+layers:
+  code:
+    path: '.serverless'
+    name: layer-${self:provider.stage}
+    description: node_modules
+    compatibleRuntimes:
+      - nodejs14.x
+
+functions:
+  hi:
+    handler: handler.default
+    layers:
+      - { Ref: CodeLambdaLayer }
+
+custom:
+  esbuild:
+    packager: yarn
+    plugins: ../esbuild-plugins.js
+    exclude:
+      - '*'
+  esbuild-layers:
+    packageJsonPath: ../
+
+package:
+  path: monorepo-artifacts
+  excludeDevDependencies: false

@@ -1,13 +1,12 @@
 {
   "dependencies": {
-    "remeda": "^1.27.0",
     "serverless-esbuild-layers": "*"
   },
   "publishConfig": {
     "registry": "http://localhost:4873"
   },
   "scripts": {
-    "test": "cd .serverless && cat ./nodejs/package.json | grep lodash"
+    "test": "cd .serverless && cat ./nodejs/package.json | grep remeda | grep 1.27"
   },
   "devDependencies": {
     "@luckycatfactory/esbuild-graphql-loader": "^3.8.1",

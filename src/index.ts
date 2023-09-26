@@ -133,7 +133,9 @@ class EsbuildLayersPlugin implements Plugin {
 
     const dependencies = await getExternalModules(this.serverless, this.config, layerRefName);
     if (dependencies.length === 0) return {};
-    const packageJsonText = await fs.promises.readFile(path.join(basePath, 'package.json'), { encoding: 'utf-8' });
+    const folderPath = this.config.packageJsonPath?.trim()?.replace(/\/?package.json/, '') ?? basePath;
+    const packageJsonPath = path.join(folderPath, 'package.json');
+    const packageJsonText = await fs.promises.readFile(packageJsonPath, { encoding: 'utf-8' });
     const packageJson = JSON.parse(packageJsonText) as PackageJsonFile;
     const depsWithVersion = dependencies.reduce(
       (obj, dep) => ({
@@ -151,7 +153,7 @@ class EsbuildLayersPlugin implements Plugin {
       deps[name] = version;
       try {
         const depPackageJsonText = await fs.promises.readFile(
-          path.join(basePath, 'node_modules', ...name.split('/'), 'package.json'),
+          path.join(folderPath, 'node_modules', ...name.split('/'), 'package.json'),
           {
             encoding: 'utf-8',
           }
@@ -173,7 +175,7 @@ class EsbuildLayersPlugin implements Plugin {
               continue;
             }
             const peerPackageJsonText = await fs.promises.readFile(
-              path.join(basePath, 'node_modules', ...peerDepName.split('/'), 'package.json'),
+              path.join(folderPath, 'node_modules', ...peerDepName.split('/'), 'package.json'),
               {
                 encoding: 'utf-8',
               }
@@ -215,7 +217,11 @@ class EsbuildLayersPlugin implements Plugin {
       const fileName = PACKAGER_LOCK_FILE_NAMES[this.packager];
       try {
         await fs.promises.copyFile(path.join(process.cwd(), fileName), path.join(nodeLayerPath, fileName));
-        const packageJsonText = await fs.promises.readFile(path.join(basePath, 'package.json'), { encoding: 'utf-8' });
+
+        const folderPath = this.config.packageJsonPath?.trim()?.replace(/\/?package.json/, '') ?? basePath;
+        const packageJsonText = await fs.promises.readFile(path.join(folderPath, 'package.json'), {
+          encoding: 'utf-8',
+        });
         const packageJson = JSON.parse(packageJsonText) as PackageJsonFile;
         await fs.promises.writeFile(
           packageJsonPath,

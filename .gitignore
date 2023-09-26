@@ -75,6 +75,11 @@ module_test/.serverless
 module_test/.esbuild
 module_test/artifacts
 
+module_test/monorepo-example-test/monorepo-artifacts
+module_test/monorepo-example-test/yarn.lock
+module_test/monorepo-example-test/.serverless
+module_test/monorepo-example-test/.esbuild
+
 dist
 
 Bar/

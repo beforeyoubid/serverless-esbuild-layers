@@ -2,9 +2,9 @@
   "name": "serverless-esbuild-layers",
   "version": "0.1.6",
   "author": {
-    "name": "Bailey Sheather",
-    "email": "bailey@beforeyoubid.com.au",
-    "url": "https://github.com/bailey-byb"
+    "name": "Alice Sheather",
+    "email": "alice@beforeyoubid.com.au",
+    "url": "https://github.com/alice-byb"
   },
   "license": "MIT",
   "main": "dist/index.js",

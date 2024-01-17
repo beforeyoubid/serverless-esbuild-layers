@@ -50,7 +50,7 @@
     "@types/jest": "^29.5.0",
     "@types/node": "^18.15.11",
     "@types/pascalcase": "^1.0.1",
-    "@types/serverless": "^3.12.11",
+    "@types/serverless": "^3.12.20",
     "@typescript-eslint/eslint-plugin": "5.59.0",
     "@typescript-eslint/parser": "5.59.0",
     "babel-plugin-add-module-exports": "^1.0.4",

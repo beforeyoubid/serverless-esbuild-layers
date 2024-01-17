@@ -78,6 +78,11 @@
     "minify-all-js": "^0.1.9",
     "pascalcase": "^1.0.0"
   },
+  "resolutions": {
+    "strip-ansi": "6.0.1",
+    "string-width": "4.2.2",
+    "wrap-ansi": "7.0.0"
+  },
   "jest": {
     "clearMocks": true,
     "collectCoverage": true,

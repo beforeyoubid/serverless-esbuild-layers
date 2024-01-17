@@ -4,3 +4,4 @@ dist
 coverage
 module_test/webpack/*
 src/__tests__/webpack.config.js
+module_test/monorepo-example-test/monorepo-artifacts

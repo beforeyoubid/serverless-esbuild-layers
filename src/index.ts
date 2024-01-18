@@ -47,6 +47,7 @@ class EsbuildLayersPlugin implements Plugin {
     this.hooks = {
       'package:initialize': this.installLayers.bind(this),
       'after:package:createDeploymentArtifacts': this.transformLayerResources.bind(this),
+      'after:aws:package:finalize:mergeCustomProviderResources': this.transformLayerResources.bind(this),
       'before:deploy:deploy': this.transformLayerResources.bind(this),
     };
     this.installedLayerNames = new Set();

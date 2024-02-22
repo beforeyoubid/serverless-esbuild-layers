@@ -21,7 +21,7 @@ jobs:
       - run: mkdir -p ./reports/jest/ ; true
       - run:
           name: Tests
-          command: yarn test --reporters=jest-junit
+          command: yarn test --reporters=jest-junit --reporters=default
           environment:
             JEST_JUNIT_OUTPUT_DIR: ./reports/jest/
       - store_test_results:

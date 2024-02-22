@@ -308,10 +308,10 @@ class EsbuildLayersPlugin implements Plugin {
     const layers = getLayers(this.serverless);
     const { compiledCloudFormationTemplate: cf } = this.serverless.service.provider;
 
-    const layersKeys = Object.keys(layers).filter(name => this.installedLayerNames.has(name));
+    const layersKeys = Object.entries(layers).filter(([name]) => this.installedLayerNames.has(name));
 
     const transformedResources = layersKeys.reduce(
-      (result: Maybe<TransformedLayerResources>, id: string) => {
+      (result: Maybe<TransformedLayerResources>, [id, layer]) => {
         if (!result) {
           result = {
             exportedLayers: [],
@@ -325,6 +325,7 @@ class EsbuildLayersPlugin implements Plugin {
         if (!output) {
           return result;
         }
+        if (layer.retain === false || layer.retain === undefined) return result;
 
         output.Export = {
           Name: {
@@ -355,8 +356,6 @@ class EsbuildLayersPlugin implements Plugin {
             }
           }
         }
-
-        this.log.verbose('CF after transformation:\n', JSON.stringify(cf, null, 2));
 
         return result;
       },

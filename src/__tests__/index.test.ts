@@ -5,7 +5,7 @@ import { Packager } from '../types';
 
 import { exec } from '../utils';
 
-function createSls(layerConfig = {}) {
+function createSls(pluginConfig = {}, layerConfig = {}) {
   return {
     service: {
       provider: {
@@ -52,7 +52,7 @@ function createSls(layerConfig = {}) {
         },
       },
       custom: {
-        'esbuild-layers': layerConfig,
+        'esbuild-layers': pluginConfig,
         esbuild: {
           plugins: 'examples/example-layer-service/plugins.js',
         },
@@ -70,9 +70,11 @@ function createSls(layerConfig = {}) {
       layers: {
         foo: {
           path: 'Foo',
+          ...layerConfig,
         },
         bar: {
           path: 'Bar',
+          ...layerConfig,
         },
       },
     },
@@ -139,15 +141,26 @@ describe(`Plugin tests`, () => {
     const { installedLayers } = await plugin.installLayers();
     expect(installedLayers).toHaveLength(2);
   });
+  describe('transformLayerResources', () => {
+    it(`should export layers successfully`, async () => {
+      const sls = createSls({}, { retain: true });
+      const plugin = createPlugin(sls);
 
-  it(`should export layers successfully`, async () => {
-    const sls = createSls({});
-    const plugin = createPlugin(sls);
+      await plugin.installLayers();
+      const { exportedLayers, upgradedLayerReferences } = plugin.transformLayerResources();
+      expect(exportedLayers).toHaveLength(1);
+      expect(upgradedLayerReferences).toHaveLength(1);
+    });
 
-    await plugin.installLayers();
-    const { exportedLayers, upgradedLayerReferences } = plugin.transformLayerResources();
-    expect(exportedLayers).toHaveLength(1);
-    expect(upgradedLayerReferences).toHaveLength(1);
+    it(`should not export layers successfully`, async () => {
+      const sls = createSls({}, { retain: false });
+      const plugin = createPlugin(sls);
+
+      await plugin.installLayers();
+      const { exportedLayers, upgradedLayerReferences } = plugin.transformLayerResources();
+      expect(exportedLayers).toHaveLength(0);
+      expect(upgradedLayerReferences).toHaveLength(0);
+    });
   });
 });
 

@@ -356,8 +356,6 @@ class EsbuildLayersPlugin implements Plugin {
           }
         }
 
-        this.log.verbose('CF after transformation:\n', JSON.stringify(cf, null, 2));
-
         return result;
       },
       {

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import pascalcase from 'pascalcase';
+import convertStringToPascalcase from 'pascalcase';
 import minifyAll from 'minify-all-js';
 
 import type Serverless from 'serverless';
@@ -365,7 +365,7 @@ class EsbuildLayersPlugin implements Plugin {
             upgradedLayerReferences: [],
           };
         }
-        const name = pascalcase(id);
+        const name = convertStringToPascalcase(id);
         const exportName = `${name}LambdaLayerQualifiedArn`;
         const output: Maybe<Output> = (cf.Outputs ?? {})[exportName];
 

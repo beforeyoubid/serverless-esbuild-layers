@@ -7,7 +7,8 @@
         "corejs": 3,
         "targets": {
           "node": "current"
-        }
+        },
+        "modules": "commonjs"
       }
     ],
     "@babel/preset-typescript"

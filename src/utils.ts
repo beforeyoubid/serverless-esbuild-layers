@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { glob } from 'glob';
 import * as esbuild from 'esbuild';
-import nodeExternalsPlugin from 'esbuild-node-externals';
+import { nodeExternalsPlugin } from 'esbuild-node-externals';
 import isBuiltinModule from 'is-builtin-module';
 
 import type { Maybe, FunctionWithConfig, Layer, Config, AWSSDKVersion } from './types';

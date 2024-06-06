@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import del from 'del';
 import pascalcase from 'pascalcase';
 import minifyAll from 'minify-all-js';
 
@@ -322,6 +321,7 @@ class EsbuildLayersPlugin implements Plugin {
    * @param folder the folder to clean
    */
   async cleanup(folder: string): Promise<void> {
+    const { deleteAsync } = await import('del');
     const { clean, minify } = this.config;
     if (!clean) return;
     const nodeLayerPath = `${folder}/nodejs`;
@@ -334,7 +334,7 @@ class EsbuildLayersPlugin implements Plugin {
     this.log.info(`Cleaning ${exclude.map(rule => path.join(nodeLayerPath, rule)).join(', ')}`);
     let filesDeleted: string[] = [];
     try {
-      filesDeleted = await del(exclude.map(rule => path.join(nodeLayerPath, rule)));
+      filesDeleted = await deleteAsync(exclude.map(rule => path.join(nodeLayerPath, rule)));
     } catch (_err) {}
     if (fs.existsSync(nodeLayerPath) && minify) {
       await minifyAll(nodeLayerPath, {

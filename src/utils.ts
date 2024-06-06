@@ -6,8 +6,14 @@ import * as esbuild from 'esbuild';
 import nodeExternalsPlugin from 'esbuild-node-externals';
 import isBuiltinModule from 'is-builtin-module';
 
-import type { Maybe, FunctionWithConfig, Layer, Config } from './types';
-import { DEFAULT_CONFIG, DEFAULT_AWS_MODULES } from './constants';
+import type { Maybe, FunctionWithConfig, Layer, Config, AWSSDKVersion } from './types';
+import {
+  DEFAULT_CONFIG,
+  DEFAULT_AWS_SDK_V2_MODULES,
+  DEFAULT_AWS_SDK_V3_MODULES,
+  SHOULD_USE_INCLUDED_AWS_SDK_BY_RUNTIME,
+  Runtime,
+} from './constants';
 
 import { exec as execNonPromise, ExecOptions, ExecException } from 'child_process';
 import util from 'util';
@@ -127,7 +133,9 @@ export function getLayers(serverless: Serverless): { [key: string]: Layer } {
 export async function getExternalModules(
   serverless: Serverless,
   config: Config,
-  layerRefName: string
+  layerRefName: string,
+  runtime: Runtime,
+  awsSdkVersion: AWSSDKVersion
 ): Promise<string[]> {
   const entries = await resolvedEntries(serverless, layerRefName);
   if (entries.length === 0) return [];
@@ -155,7 +163,9 @@ export async function getExternalModules(
     outdir: '.serverless/tmp_build',
   });
 
-  const importedModules = Object.values(result.metafile.outputs).map(({ imports }) => imports.map(i => i.path));
+  const importedModules = Object.values(result.metafile.outputs)
+    .map(({ imports }) => imports.map(i => i.path))
+    .flat();
   const requiredModules = Object.entries(result.metafile.inputs)
     .filter(([key]) => !key.startsWith('node_modules'))
     .map(([, { imports }]) =>
@@ -163,18 +173,40 @@ export async function getExternalModules(
         .filter(i => i.path.startsWith('node_modules'))
         .map(i => i.original)
         .filter(notEmpty)
-    );
+    )
+    .flat();
 
   const imports = new Set(
-    [...importedModules, ...requiredModules]
-      .reduce((list, listsOfMods) => list.concat(...listsOfMods), [])
-      .filter(module => !isBuiltinModule(module))
-      .map(fixModuleName)
+    [...importedModules, ...requiredModules].filter(module => !isBuiltinModule(module)).map(fixModuleName)
   );
   return Array.from(imports)
-    .filter(dep => !DEFAULT_AWS_MODULES.includes(dep) && !config.forceExclude.includes(dep))
+    .filter(
+      dep => !isModuleALambdaIncludedDefaultModule(dep, runtime, awsSdkVersion) && !config.forceExclude.includes(dep)
+    )
     .concat(config.forceInclude);
 }
+
+/**
+ * util function to decide whether a module is a module included with Lambda
+ * @param module the module to check
+ * @param awsSdkVersion the version of aws sdk
+ * @returns a boolean of whether it should be included
+ */
+export const isModuleALambdaIncludedDefaultModule = (
+  module: string,
+  runtime: Runtime,
+  awsSdkVersion: AWSSDKVersion
+): boolean => {
+  if (!SHOULD_USE_INCLUDED_AWS_SDK_BY_RUNTIME[runtime]) {
+    return false;
+  }
+  switch (awsSdkVersion) {
+    case 2:
+      return DEFAULT_AWS_SDK_V2_MODULES.includes(module);
+    case 3:
+      return DEFAULT_AWS_SDK_V3_MODULES.includes(module);
+  }
+};
 
 /**
  * function to merge the user config with the default config to create a complete config
@@ -182,10 +214,7 @@ export async function getExternalModules(
  * @returns a complete config object
  */
 export function compileConfig(userConfig: Partial<Config>): Config {
-  return {
-    ...DEFAULT_CONFIG,
-    ...userConfig,
-  };
+  return merge(DEFAULT_CONFIG, userConfig);
 }
 
 /**
@@ -201,3 +230,37 @@ export function fixModuleName(mod: string): string {
   const [packageName] = mod.split('/');
   return packageName;
 }
+
+/** util function to merge objects */
+export const merge = <T extends object>(...values: (T | Partial<T>)[]): T => {
+  const obj: Partial<T> = {};
+  const keys = new Set<keyof T>(values.map(obj => Object.getOwnPropertyNames(obj) as (keyof T)[]).flat());
+
+  for (const key of keys) {
+    if (typeof key !== 'string') continue;
+
+    const valuesWithKey = values.filter(v => Object.getOwnPropertyNames(v).includes(key)).filter(notEmpty);
+    const allValuesAreArrays = valuesWithKey.every(v => Array.isArray(v[key]));
+    const allValuesAreObjects = valuesWithKey.every(v => typeof v[key] === 'object' && !Array.isArray(v[key]));
+
+    if (allValuesAreArrays) {
+      obj[key] = valuesWithKey
+        .map(v => v[key] as Maybe<T[typeof key]>)
+        .filter(notEmpty)
+        .reduce((array, value) => array.concat(value), [] as T[typeof key][]) as T[typeof key];
+      continue;
+    }
+
+    if (allValuesAreObjects) {
+      obj[key] = merge(...(valuesWithKey.map(v => v[key]) as object[])) as T[typeof key];
+      continue;
+    }
+
+    const val = valuesWithKey.at(-1);
+    if (val) {
+      obj[key] = val[key];
+      continue;
+    }
+  }
+  return obj as T;
+};

@@ -17,8 +17,14 @@ import {
   TransformedLayerResources,
   Maybe,
   FunctionLayerReference,
+  AWSSDKVersion,
 } from './types';
-import { PACKAGER_ADD_COMMAND, PACKAGER_LOCK_FILE_NAMES } from './constants';
+import {
+  INCLUDED_AWS_SDK_VERSION_BY_RUNTIME,
+  PACKAGER_ADD_COMMAND,
+  PACKAGER_LOCK_FILE_NAMES,
+  Runtime,
+} from './constants';
 import { compileConfig, getExternalModules, getLayers, exec } from './utils';
 import { Log } from './logger';
 
@@ -34,6 +40,8 @@ class EsbuildLayersPlugin implements Plugin {
   serverless: Serverless;
   region: string;
   packager: Packager;
+  awsSdkVersion: AWSSDKVersion;
+  runtime: Runtime;
   config: Config;
   level: LevelName;
   log: Plugin.Logging['log'];
@@ -44,12 +52,6 @@ class EsbuildLayersPlugin implements Plugin {
    * @param serverless the serverless instance
    */
   constructor(serverless: Serverless, options: Serverless.Options, logging?: Plugin.Logging) {
-    this.hooks = {
-      'package:initialize': this.installLayers.bind(this),
-      'after:package:createDeploymentArtifacts': this.transformLayerResources.bind(this),
-      'after:aws:package:finalize:mergeCustomProviderResources': this.transformLayerResources.bind(this),
-      'before:deploy:deploy': this.transformLayerResources.bind(this),
-    };
     this.installedLayerNames = new Set();
 
     this.serverless = serverless;
@@ -57,6 +59,7 @@ class EsbuildLayersPlugin implements Plugin {
     this.config = compileConfig(serverless.service.custom['esbuild-layers'] ?? {});
     this.level = options.verbose ? 'verbose' : this.config.level;
     this.log = logging?.log ?? Log(this.level);
+    this.runtime = this.identifyRuntime();
 
     const packager = this.config.packager;
     if (packager === 'auto') {
@@ -64,6 +67,46 @@ class EsbuildLayersPlugin implements Plugin {
     } else {
       this.packager = packager;
     }
+
+    const awsSdkVersion = this.config.awsSdkVersion;
+    if (awsSdkVersion === 'auto') {
+      this.awsSdkVersion = this.identifyAwsSdkVersion();
+    } else {
+      this.awsSdkVersion = awsSdkVersion;
+    }
+
+    this.hooks = {
+      'package:initialize': this.installLayers.bind(this),
+      'after:package:createDeploymentArtifacts': this.transformLayerResources.bind(this),
+      'after:aws:package:finalize:mergeCustomProviderResources': this.transformLayerResources.bind(this),
+      'before:deploy:deploy': this.transformLayerResources.bind(this),
+    };
+  }
+
+  /**
+   * util function to identify the runtime version
+   */
+  identifyRuntime(): Runtime {
+    if (this.serverless.service.provider.runtime) {
+      return this.serverless.service.provider.runtime as Runtime;
+    }
+    this.log.debug('Unable to detect runtime from serverless file, defaulting to detection from node version');
+    const mainJS = process.versions.node.split('.')?.[0];
+    if (!mainJS) {
+      throw new Error('Unable to identify runtime from active node version');
+    }
+    const mainJsAsNumber = Number(mainJS);
+    if (isNaN(mainJsAsNumber)) {
+      throw new Error('Unable to identify runtime from active node version');
+    }
+    return `nodejs${mainJsAsNumber}.x`;
+  }
+
+  /**
+   * util function to identify the aws sdk version
+   */
+  identifyAwsSdkVersion(): AWSSDKVersion {
+    return INCLUDED_AWS_SDK_VERSION_BY_RUNTIME[this.runtime];
   }
 
   /**
@@ -132,7 +175,13 @@ class EsbuildLayersPlugin implements Plugin {
   async fetchModulesForLayer(layerName: string) {
     const layerRefName = `${layerName.replace(/^./, x => x.toUpperCase())}LambdaLayer`;
 
-    const dependencies = await getExternalModules(this.serverless, this.config, layerRefName);
+    const dependencies = await getExternalModules(
+      this.serverless,
+      this.config,
+      layerRefName,
+      this.runtime,
+      this.awsSdkVersion
+    );
     if (dependencies.length === 0) return {};
     const folderPath = this.config.packageJsonPath?.trim()?.replace(/\/?package.json/, '') ?? basePath;
     const packageJsonPath = path.join(folderPath, 'package.json');
@@ -155,9 +204,7 @@ class EsbuildLayersPlugin implements Plugin {
       try {
         const depPackageJsonText = await fs.promises.readFile(
           path.join(folderPath, 'node_modules', ...name.split('/'), 'package.json'),
-          {
-            encoding: 'utf-8',
-          }
+          { encoding: 'utf-8' }
         );
         const depPackageJson = JSON.parse(depPackageJsonText) as PackageJsonFile;
         const { peerDependencies, peerDependenciesMeta } = depPackageJson;

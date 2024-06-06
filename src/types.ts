@@ -15,12 +15,7 @@ export type PackageJsonFile = {
   devDependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
   resolutions?: Record<string, string>;
-  peerDependenciesMeta?: Record<
-    string,
-    {
-      optional?: boolean;
-    }
-  >;
+  peerDependenciesMeta?: Record<string, { optional?: boolean }>;
 };
 export type FunctionLayerReference = {
   Ref: string;
@@ -35,6 +30,7 @@ export type FunctionWithConfig = Serverless.FunctionDefinitionHandler & {
 
 export type TransformedLayerResources = { exportedLayers: Output[]; upgradedLayerReferences: FunctionLayerReference[] };
 export type Packager = 'npm' | 'yarn' | 'pnpm';
+export type AWSSDKVersion = 2 | 3;
 
 export type Config = {
   packager: Packager | 'auto';
@@ -44,6 +40,7 @@ export type Config = {
   forceExclude: string[];
   forceInclude: string[];
   packageJsonPath?: string;
+  awsSdkVersion: AWSSDKVersion | 'auto';
 };
 
 export enum Level {

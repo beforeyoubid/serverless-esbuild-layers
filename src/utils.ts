@@ -6,13 +6,12 @@ import * as esbuild from 'esbuild';
 import { nodeExternalsPlugin } from 'esbuild-node-externals';
 import isBuiltinModule from 'is-builtin-module';
 
-import type { Maybe, FunctionWithConfig, Layer, Config, AWSSDKVersion } from './types';
+import type { Maybe, FunctionWithConfig, Layer, Config, ResolvedConfig } from './types';
 import {
   DEFAULT_CONFIG,
   DEFAULT_AWS_SDK_V2_MODULES,
   DEFAULT_AWS_SDK_V3_MODULES,
   SHOULD_USE_INCLUDED_AWS_SDK_BY_RUNTIME,
-  Runtime,
 } from './constants';
 
 import { exec as execNonPromise, ExecOptions, ExecException } from 'child_process';
@@ -132,10 +131,8 @@ export function getLayers(serverless: Serverless): { [key: string]: Layer } {
  */
 export async function getExternalModules(
   serverless: Serverless,
-  config: Config,
-  layerRefName: string,
-  runtime: Runtime,
-  awsSdkVersion: AWSSDKVersion
+  config: ResolvedConfig,
+  layerRefName: string
 ): Promise<string[]> {
   const entries = await resolvedEntries(serverless, layerRefName);
   if (entries.length === 0) return [];
@@ -180,9 +177,7 @@ export async function getExternalModules(
     [...importedModules, ...requiredModules].filter(module => !isBuiltinModule(module)).map(fixModuleName)
   );
   return Array.from(imports)
-    .filter(
-      dep => !isModuleALambdaIncludedDefaultModule(dep, runtime, awsSdkVersion) && !config.forceExclude.includes(dep)
-    )
+    .filter(dep => !isModuleALambdaIncludedDefaultModule(dep, config) && !config.forceExclude.includes(dep))
     .concat(config.forceInclude);
 }
 
@@ -192,15 +187,11 @@ export async function getExternalModules(
  * @param awsSdkVersion the version of aws sdk
  * @returns a boolean of whether it should be included
  */
-export const isModuleALambdaIncludedDefaultModule = (
-  module: string,
-  runtime: Runtime,
-  awsSdkVersion: AWSSDKVersion
-): boolean => {
-  if (!SHOULD_USE_INCLUDED_AWS_SDK_BY_RUNTIME[runtime]) {
+export const isModuleALambdaIncludedDefaultModule = (module: string, config: ResolvedConfig): boolean => {
+  if (!SHOULD_USE_INCLUDED_AWS_SDK_BY_RUNTIME[config.runtime]) {
     return false;
   }
-  switch (awsSdkVersion) {
+  switch (config.awsSdkVersion) {
     case 2:
       return DEFAULT_AWS_SDK_V2_MODULES.includes(module);
     case 3:

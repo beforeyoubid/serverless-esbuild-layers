@@ -1,4 +1,4 @@
-import { type Packager, type Config, AWSSDKVersion } from './types';
+import { type Packager, type Config, type AWSSDKVersion, type Runtime } from './types';
 
 export const PACKAGER_INSTALL_COMMAND: Record<Packager, string> = {
   npm: 'npm install',
@@ -27,8 +27,6 @@ export const DEFAULT_CONFIG: Config = {
   forceExclude: [],
   forceInclude: [],
 };
-
-export type Runtime = `nodejs${number}.x`;
 
 export const INCLUDED_AWS_SDK_VERSION_BY_RUNTIME: Record<Runtime, AWSSDKVersion> = {
   'nodejs20.x': 3,

@@ -1,6 +1,8 @@
 import type Serverless from 'serverless';
 import type { Output } from 'serverless/aws';
 
+export type Runtime = `nodejs${number}.x`;
+
 export type Maybe<T> = null | undefined | T;
 
 export type Layer = {
@@ -32,15 +34,22 @@ export type TransformedLayerResources = { exportedLayers: Output[]; upgradedLaye
 export type Packager = 'npm' | 'yarn' | 'pnpm';
 export type AWSSDKVersion = 2 | 3;
 
+export type Auto = 'auto';
+
 export type Config = {
-  packager: Packager | 'auto';
+  packager: Packager | Auto;
   level: LevelName;
   clean: boolean;
   minify: boolean;
+  runtime?: Runtime;
   forceExclude: string[];
   forceInclude: string[];
-  packageJsonPath?: string;
-  awsSdkVersion: AWSSDKVersion | 'auto';
+  packageJsonPath?: Maybe<string>;
+  awsSdkVersion: AWSSDKVersion | Auto;
+};
+
+export type ResolvedConfig = {
+  [Key in keyof Config]-?: Exclude<Config[Key], Auto>;
 };
 
 export enum Level {

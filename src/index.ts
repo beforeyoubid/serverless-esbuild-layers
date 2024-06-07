@@ -17,13 +17,10 @@ import {
   Maybe,
   FunctionLayerReference,
   AWSSDKVersion,
-} from './types';
-import {
-  INCLUDED_AWS_SDK_VERSION_BY_RUNTIME,
-  PACKAGER_ADD_COMMAND,
-  PACKAGER_LOCK_FILE_NAMES,
   Runtime,
-} from './constants';
+  ResolvedConfig,
+} from './types';
+import { INCLUDED_AWS_SDK_VERSION_BY_RUNTIME, PACKAGER_ADD_COMMAND, PACKAGER_LOCK_FILE_NAMES } from './constants';
 import { compileConfig, getExternalModules, getLayers, exec } from './utils';
 import { Log } from './logger';
 
@@ -38,10 +35,7 @@ class EsbuildLayersPlugin implements Plugin {
   hooks: Plugin['hooks'];
   serverless: Serverless;
   region: string;
-  packager: Packager;
-  awsSdkVersion: AWSSDKVersion;
-  runtime: Runtime;
-  config: Config;
+  config: ResolvedConfig;
   level: LevelName;
   log: Plugin.Logging['log'];
   installedLayerNames: Set<string>;
@@ -55,30 +49,44 @@ class EsbuildLayersPlugin implements Plugin {
 
     this.serverless = serverless;
     this.region = serverless.service.provider.region;
-    this.config = compileConfig(serverless.service.custom['esbuild-layers'] ?? {});
+    this.config = this.resolveConfig(serverless.service.custom['esbuild-layers'] ?? {});
     this.level = options.verbose ? 'verbose' : this.config.level;
     this.log = logging?.log ?? Log(this.level);
-    this.runtime = this.identifyRuntime();
-
-    const packager = this.config.packager;
-    if (packager === 'auto') {
-      this.packager = this.identifyPackager();
-    } else {
-      this.packager = packager;
-    }
-
-    const awsSdkVersion = this.config.awsSdkVersion;
-    if (awsSdkVersion === 'auto') {
-      this.awsSdkVersion = this.identifyAwsSdkVersion();
-    } else {
-      this.awsSdkVersion = awsSdkVersion;
-    }
 
     this.hooks = {
       'package:initialize': this.installLayers.bind(this),
       'after:package:createDeploymentArtifacts': this.transformLayerResources.bind(this),
       'after:aws:package:finalize:mergeCustomProviderResources': this.transformLayerResources.bind(this),
       'before:deploy:deploy': this.transformLayerResources.bind(this),
+    };
+  }
+
+  /**
+   * util function to resolve config
+   * @param config the base config from the sls file
+   * @returns the entire config
+   */
+  resolveConfig(config: Partial<Config>): ResolvedConfig {
+    const baseConfig = compileConfig(config);
+
+    const runtime = this.identifyRuntime();
+
+    let packager = baseConfig.packager;
+    if (packager === 'auto') {
+      packager = this.identifyPackager();
+    }
+
+    let awsSdkVersion = baseConfig.awsSdkVersion;
+    if (awsSdkVersion === 'auto') {
+      awsSdkVersion = this.identifyAwsSdkVersion(runtime);
+    }
+
+    return {
+      packageJsonPath: null,
+      ...baseConfig,
+      packager,
+      awsSdkVersion,
+      runtime,
     };
   }
 
@@ -104,8 +112,8 @@ class EsbuildLayersPlugin implements Plugin {
   /**
    * util function to identify the aws sdk version
    */
-  identifyAwsSdkVersion(): AWSSDKVersion {
-    return INCLUDED_AWS_SDK_VERSION_BY_RUNTIME[this.runtime];
+  identifyAwsSdkVersion(runtime: Runtime): AWSSDKVersion {
+    return INCLUDED_AWS_SDK_VERSION_BY_RUNTIME[runtime];
   }
 
   /**
@@ -174,13 +182,7 @@ class EsbuildLayersPlugin implements Plugin {
   async fetchModulesForLayer(layerName: string) {
     const layerRefName = `${layerName.replace(/^./, x => x.toUpperCase())}LambdaLayer`;
 
-    const dependencies = await getExternalModules(
-      this.serverless,
-      this.config,
-      layerRefName,
-      this.runtime,
-      this.awsSdkVersion
-    );
+    const dependencies = await getExternalModules(this.serverless, this.config, layerRefName);
     if (dependencies.length === 0) return {};
     const folderPath = this.config.packageJsonPath?.trim()?.replace(/\/?package.json/, '') ?? basePath;
     const packageJsonPath = path.join(folderPath, 'package.json');
@@ -261,7 +263,7 @@ class EsbuildLayersPlugin implements Plugin {
       }
       const dependencies = await this.fetchModulesForLayer(layerName);
       if (Object.keys(dependencies).length === 0) return false;
-      const fileName = PACKAGER_LOCK_FILE_NAMES[this.packager];
+      const fileName = PACKAGER_LOCK_FILE_NAMES[this.config.packager];
       try {
         await fs.promises.copyFile(path.join(process.cwd(), fileName), path.join(nodeLayerPath, fileName));
 
@@ -288,7 +290,9 @@ class EsbuildLayersPlugin implements Plugin {
       const productionModeFlagEnvironmentAgnostic =
         process.platform === 'win32' ? 'set NODE_ENV=production &&' : 'NODE_ENV=production';
       const productionModeFlag = productionModeFlagEnvironmentAgnostic;
-      const command = `${productionModeFlag} ${PACKAGER_ADD_COMMAND[this.packager]} ${Object.entries(dependencies)
+      const command = `${productionModeFlag} ${PACKAGER_ADD_COMMAND[this.config.packager]} ${Object.entries(
+        dependencies
+      )
         .map(([name, version]) => `${name}@${version}`)
         .join(' ')}`;
 
@@ -298,7 +302,7 @@ class EsbuildLayersPlugin implements Plugin {
         cwd: nodeLayerPath,
         encoding: null,
       });
-      if (this.packager === 'yarn') {
+      if (this.config.packager === 'yarn') {
         await exec(`yarn autoclean --init`, { cwd: nodeLayerPath, encoding: null });
       }
       return true;

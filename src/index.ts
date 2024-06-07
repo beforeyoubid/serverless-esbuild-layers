@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import del from 'del';
-import pascalcase from 'pascalcase';
+import convertStringToPascalcase from 'pascalcase';
 import minifyAll from 'minify-all-js';
 
 import type Serverless from 'serverless';
@@ -17,8 +16,11 @@ import {
   TransformedLayerResources,
   Maybe,
   FunctionLayerReference,
+  AWSSDKVersion,
+  Runtime,
+  ResolvedConfig,
 } from './types';
-import { PACKAGER_ADD_COMMAND, PACKAGER_LOCK_FILE_NAMES } from './constants';
+import { INCLUDED_AWS_SDK_VERSION_BY_RUNTIME, PACKAGER_ADD_COMMAND, PACKAGER_LOCK_FILE_NAMES } from './constants';
 import { compileConfig, getExternalModules, getLayers, exec } from './utils';
 import { Log } from './logger';
 
@@ -33,8 +35,7 @@ class EsbuildLayersPlugin implements Plugin {
   hooks: Plugin['hooks'];
   serverless: Serverless;
   region: string;
-  packager: Packager;
-  config: Config;
+  config: ResolvedConfig;
   level: LevelName;
   log: Plugin.Logging['log'];
   installedLayerNames: Set<string>;
@@ -44,26 +45,75 @@ class EsbuildLayersPlugin implements Plugin {
    * @param serverless the serverless instance
    */
   constructor(serverless: Serverless, options: Serverless.Options, logging?: Plugin.Logging) {
+    this.installedLayerNames = new Set();
+
+    this.serverless = serverless;
+    this.region = serverless.service.provider.region;
+    this.config = this.resolveConfig(serverless.service.custom['esbuild-layers'] ?? {});
+    this.level = options.verbose ? 'verbose' : this.config.level;
+    this.log = logging?.log ?? Log(this.level);
+
     this.hooks = {
       'package:initialize': this.installLayers.bind(this),
       'after:package:createDeploymentArtifacts': this.transformLayerResources.bind(this),
       'after:aws:package:finalize:mergeCustomProviderResources': this.transformLayerResources.bind(this),
       'before:deploy:deploy': this.transformLayerResources.bind(this),
     };
-    this.installedLayerNames = new Set();
+  }
 
-    this.serverless = serverless;
-    this.region = serverless.service.provider.region;
-    this.config = compileConfig(serverless.service.custom['esbuild-layers'] ?? {});
-    this.level = options.verbose ? 'verbose' : this.config.level;
-    this.log = logging?.log ?? Log(this.level);
+  /**
+   * util function to resolve config
+   * @param config the base config from the sls file
+   * @returns the entire config
+   */
+  resolveConfig(config: Partial<Config>): ResolvedConfig {
+    const baseConfig = compileConfig(config);
 
-    const packager = this.config.packager;
+    const runtime = this.identifyRuntime();
+
+    let packager = baseConfig.packager;
     if (packager === 'auto') {
-      this.packager = this.identifyPackager();
-    } else {
-      this.packager = packager;
+      packager = this.identifyPackager();
     }
+
+    let awsSdkVersion = baseConfig.awsSdkVersion;
+    if (awsSdkVersion === 'auto') {
+      awsSdkVersion = this.identifyAwsSdkVersion(runtime);
+    }
+
+    return {
+      packageJsonPath: null,
+      ...baseConfig,
+      packager,
+      awsSdkVersion,
+      runtime,
+    };
+  }
+
+  /**
+   * util function to identify the runtime version
+   */
+  identifyRuntime(): Runtime {
+    if (this.serverless.service.provider.runtime) {
+      return this.serverless.service.provider.runtime as Runtime;
+    }
+    this.log.debug('Unable to detect runtime from serverless file, defaulting to detection from node version');
+    const mainJS = process.versions.node.split('.')?.[0];
+    if (!mainJS) {
+      throw new Error('Unable to identify runtime from active node version');
+    }
+    const mainJsAsNumber = Number(mainJS);
+    if (isNaN(mainJsAsNumber)) {
+      throw new Error('Unable to identify runtime from active node version');
+    }
+    return `nodejs${mainJsAsNumber}.x`;
+  }
+
+  /**
+   * util function to identify the aws sdk version
+   */
+  identifyAwsSdkVersion(runtime: Runtime): AWSSDKVersion {
+    return INCLUDED_AWS_SDK_VERSION_BY_RUNTIME[runtime];
   }
 
   /**
@@ -155,9 +205,7 @@ class EsbuildLayersPlugin implements Plugin {
       try {
         const depPackageJsonText = await fs.promises.readFile(
           path.join(folderPath, 'node_modules', ...name.split('/'), 'package.json'),
-          {
-            encoding: 'utf-8',
-          }
+          { encoding: 'utf-8' }
         );
         const depPackageJson = JSON.parse(depPackageJsonText) as PackageJsonFile;
         const { peerDependencies, peerDependenciesMeta } = depPackageJson;
@@ -215,7 +263,7 @@ class EsbuildLayersPlugin implements Plugin {
       }
       const dependencies = await this.fetchModulesForLayer(layerName);
       if (Object.keys(dependencies).length === 0) return false;
-      const fileName = PACKAGER_LOCK_FILE_NAMES[this.packager];
+      const fileName = PACKAGER_LOCK_FILE_NAMES[this.config.packager];
       try {
         await fs.promises.copyFile(path.join(process.cwd(), fileName), path.join(nodeLayerPath, fileName));
 
@@ -242,7 +290,9 @@ class EsbuildLayersPlugin implements Plugin {
       const productionModeFlagEnvironmentAgnostic =
         process.platform === 'win32' ? 'set NODE_ENV=production &&' : 'NODE_ENV=production';
       const productionModeFlag = productionModeFlagEnvironmentAgnostic;
-      const command = `${productionModeFlag} ${PACKAGER_ADD_COMMAND[this.packager]} ${Object.entries(dependencies)
+      const command = `${productionModeFlag} ${PACKAGER_ADD_COMMAND[this.config.packager]} ${Object.entries(
+        dependencies
+      )
         .map(([name, version]) => `${name}@${version}`)
         .join(' ')}`;
 
@@ -252,7 +302,7 @@ class EsbuildLayersPlugin implements Plugin {
         cwd: nodeLayerPath,
         encoding: null,
       });
-      if (this.packager === 'yarn') {
+      if (this.config.packager === 'yarn') {
         await exec(`yarn autoclean --init`, { cwd: nodeLayerPath, encoding: null });
       }
       return true;
@@ -275,6 +325,7 @@ class EsbuildLayersPlugin implements Plugin {
    * @param folder the folder to clean
    */
   async cleanup(folder: string): Promise<void> {
+    const { deleteAsync } = await import('del');
     const { clean, minify } = this.config;
     if (!clean) return;
     const nodeLayerPath = `${folder}/nodejs`;
@@ -287,7 +338,7 @@ class EsbuildLayersPlugin implements Plugin {
     this.log.info(`Cleaning ${exclude.map(rule => path.join(nodeLayerPath, rule)).join(', ')}`);
     let filesDeleted: string[] = [];
     try {
-      filesDeleted = await del(exclude.map(rule => path.join(nodeLayerPath, rule)));
+      filesDeleted = await deleteAsync(exclude.map(rule => path.join(nodeLayerPath, rule)));
     } catch (_err) {}
     if (fs.existsSync(nodeLayerPath) && minify) {
       await minifyAll(nodeLayerPath, {
@@ -318,7 +369,7 @@ class EsbuildLayersPlugin implements Plugin {
             upgradedLayerReferences: [],
           };
         }
-        const name = pascalcase(id);
+        const name = convertStringToPascalcase(id);
         const exportName = `${name}LambdaLayerQualifiedArn`;
         const output: Maybe<Output> = (cf.Outputs ?? {})[exportName];
 

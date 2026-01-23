@@ -18,7 +18,7 @@ import {
   Maybe,
   FunctionLayerReference,
 } from './types';
-import { PACKAGER_ADD_COMMAND, PACKAGER_LOCK_FILE_NAMES } from './constants';
+import { PACKAGER_ADD_COMMAND, PACKAGER_INSTALL_COMMAND, PACKAGER_LOCK_FILE_NAMES } from './constants';
 import { compileConfig, getExternalModules, getLayers, exec } from './utils';
 import { Log } from './logger';
 
@@ -219,22 +219,27 @@ class EsbuildLayersPlugin implements Plugin {
       try {
         await fs.promises.copyFile(path.join(process.cwd(), fileName), path.join(nodeLayerPath, fileName));
 
-        const folderPath = this.config.packageJsonPath?.trim()?.replace(/\/?package.json/, '') ?? basePath;
-        const packageJsonText = await fs.promises.readFile(path.join(folderPath, 'package.json'), {
-          encoding: 'utf-8',
-        });
-        const packageJson = JSON.parse(packageJsonText) as PackageJsonFile;
-        await fs.promises.writeFile(
-          packageJsonPath,
-          JSON.stringify(
-            {
-              dependencies,
-              resolutions: packageJson.resolutions ?? {},
-            },
-            null,
-            2
-          )
-        );
+        const packageJsonExists = fs.existsSync(packageJsonPath);
+        if (this.config.preservePackageJson && packageJsonExists) {
+          this.log.info(`Preserving existing package.json at ${packageJsonPath}`);
+        } else {
+          const folderPath = this.config.packageJsonPath?.trim()?.replace(/\/?package.json/, '') ?? basePath;
+          const packageJsonText = await fs.promises.readFile(path.join(folderPath, 'package.json'), {
+            encoding: 'utf-8',
+          });
+          const packageJson = JSON.parse(packageJsonText) as PackageJsonFile;
+          await fs.promises.writeFile(
+            packageJsonPath,
+            JSON.stringify(
+              {
+                dependencies,
+                resolutions: packageJson.resolutions ?? {},
+              },
+              null,
+              2
+            )
+          );
+        }
       } catch {
         this.log.info(`Unable to copy ${fileName} across, this will cause version inaccuracies`);
       }
@@ -242,9 +247,17 @@ class EsbuildLayersPlugin implements Plugin {
       const productionModeFlagEnvironmentAgnostic =
         process.platform === 'win32' ? 'set NODE_ENV=production &&' : 'NODE_ENV=production';
       const productionModeFlag = productionModeFlagEnvironmentAgnostic;
-      const command = `${productionModeFlag} ${PACKAGER_ADD_COMMAND[this.packager]} ${Object.entries(dependencies)
-        .map(([name, version]) => `${name}@${version}`)
-        .join(' ')}`;
+      const packageJsonExists = fs.existsSync(packageJsonPath);
+      const shouldPreservePackageJson = this.config.preservePackageJson && packageJsonExists;
+
+      let command: string;
+      if (shouldPreservePackageJson) {
+        command = `${productionModeFlag} ${PACKAGER_INSTALL_COMMAND[this.packager]}`;
+      } else {
+        command = `${productionModeFlag} ${PACKAGER_ADD_COMMAND[this.packager]} ${Object.entries(dependencies)
+          .map(([name, version]) => `${name}@${version}`)
+          .join(' ')}`;
+      }
 
       this.log.info(`Layer = ${layerName}`);
       this.log.info(`Running command ${command}`);

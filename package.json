@@ -22,7 +22,8 @@
     "build": "rimraf dist && npm run build:types && npm run build:js && npm run clean",
     "clean": "del dist/**/__tests__/*",
     "build:types": "tsc --emitDeclarationOnly",
-    "build:js": "babel src/*.ts --out-dir dist --extensions \".ts,.tsx\" --source-maps inline"
+    "build:js": "babel src/*.ts --out-dir dist --extensions \".ts,.tsx\" --source-maps inline",
+    "prepare": "npm run build"
   },
   "repository": {
     "type": "git",

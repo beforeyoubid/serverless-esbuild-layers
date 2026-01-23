@@ -84,6 +84,7 @@ custom:
       - some-library
     forceInclude:
       - some-other-library
+    preservePackageJson: false # if true, preserves existing package.json files in layers instead of rewriting them
 ```
 
 ### Package.json pathing
